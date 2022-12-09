@@ -1,0 +1,6 @@
+http://example.com/2022/12/09/test/
+http://example.com/2022/12/09/hello-world/
+http://example.com/
+http://example.com/tags/First/
+http://example.com/tags/Test/
+http://example.com/categories/test/
