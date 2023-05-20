@@ -215,6 +215,10 @@ div#blank-right {
     flex: 1;
 }
 
+div#blank-top {
+    flex: 2;
+}
+
 @media screen and (max-width: 768px) {
 
     /* 在屏幕宽度小于等于768px时的样式 */
