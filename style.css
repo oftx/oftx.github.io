@@ -19,6 +19,15 @@ body {
     justify-content: center;
 }
 
+.big-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 .play-button {
     width: 100px;
     height: 66px;
@@ -112,6 +121,14 @@ body {
     padding: 8px;
     float: right;
     width: 50%;
+}
+
+.bottom {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
 }
 
 .slider-container {
