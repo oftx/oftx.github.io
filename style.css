@@ -197,3 +197,94 @@ div#blank-left {
 div#blank-right {
     flex: 1;
 }
+
+@media screen and (max-width: 768px) {
+
+    /* 在屏幕宽度小于等于768px时的样式 */
+    body {
+        /* 修改背景颜色 */
+        background-color: #ffffff;
+    }
+
+    .container {
+        /* 修改主容器为竖向排列 */
+        flex-direction: column;
+        /* 修改高度为自适应 */
+        height: auto;
+    }
+
+    .main {
+        /* 修改宽度为100% */
+        width: 100%;
+        /* 移除右侧边距 */
+        margin-right: 0;
+    }
+
+    .right {
+        /* 修改宽度为100% */
+        width: 100%;
+        /* 移除左侧边距 */
+        margin-left: 0;
+        /* 调整内边距 */
+        padding: 0;
+    }
+
+    .value-container {
+        /* 调整布局为竖向排列 */
+        flex-direction: row;
+        /* 调整高度 */
+        height: auto;
+        /* 调整底部边距 */
+        margin-bottom: 10px;
+    }
+
+    #hzValue {
+        /* 调整输入框宽度 */
+        width: 80%;
+    }
+
+    #hz-unit {
+        /* 调整字体大小 */
+        font-size: 20px;
+        /* 调整底部边距 */
+        padding-bottom: 10px;
+    }
+
+    .play-button {
+        border-radius: 22px;
+        margin: 5px 5px;
+    }
+    
+    .stop-button {
+        border-radius: 22px;
+        margin: 5px 5px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+
+    /* 在屏幕宽度小于等于480px时的样式 */
+    .play-button,
+    .stop-button {
+        /* 调整按钮宽度 */
+        width: 80px;
+        /* 调整字体大小 */
+        font-size: 16px;
+    }
+
+    .slider {
+        /* 调整高度 */
+        height: 16px;
+    }
+
+    .slider::-webkit-slider-thumb {
+        /* 调整宽度和高度 */
+        width: 60px;
+        height: 32px;
+    }
+
+    .slider::-webkit-slider-thumb:before {
+        /* 调整字体大小 */
+        font-size: 10px;
+    }
+}
