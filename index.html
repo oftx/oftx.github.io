@@ -14,8 +14,11 @@
             <div class="main">
                 <div class="value-container">
                     <div id="blank-left"></div>
+                    <button class="control-button" id="decrease">⇦</button>
+                    <div id="blank-left"></div>
                     <input id="hzValue" />
                     <span id="hz-unit">Hz</span>
+                    <button class="control-button" id="increase">⇨</button>
                     <div id="blank-right"></div>
                 </div>
                 <div class="slider-container">
@@ -24,8 +27,8 @@
                     </div>
                 </div>
                 <div class="button-container">
-                    <button onclick="playSound()" class="play-button">Play</button>
-                    <button onclick="stopSound()" class="stop-button">Stop</button>
+                    <button onclick="playSound()" class="default-button">播放</button>
+                    <button onclick="stopSound()" class="default-button">停止</button>
                 </div>
             </div>
             <div class="right">

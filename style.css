@@ -28,52 +28,47 @@ body {
     justify-content: center;
 }
 
-.play-button {
-    width: 100px;
+.control-button {
+    width: 66px;
     height: 66px;
-    border-radius: 18px;
-    background-color: #f2f2f2;
-    border: 2px solid #c7c7c7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 20px;
-    font-weight: 400;
-    margin: 0px 5px;
-    transition: all 0.2s ease-in-out;
-}
-
-.play-button:hover {
-    background-color: #e0e0e0;
-}
-
-.play-button:active {
-    background-color: #c7c7c7;
-}
-
-.stop-button {
-    width: 100px;
-    height: 66px;
-    border-radius: 18px;
-    background-color: #f2f2f2;
-    border: 2px solid #c7c7c7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 20px;
-    font-weight: 400;
-    margin: 0px 5px;
-    transition: all 0.2s ease-in-out;
-}
-
-.stop-button:hover {
-    background-color: #e0e0e0;
-}
-
-.stop-button:active {
+    border-radius: 33px;
     background-color: #f8f8f8;
+    border: 1px solid #cccccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 40px;
+    color: #686868;
+    font-weight: 400;
+    margin: 0px 5px;
+    transition: all 0.2s ease-in-out;
+}
+
+.default-button {
+    width: 100px;
+    height: 66px;
+    border-radius: 18px;
+    background-color: #f2f2f2;
+    border: 2px solid #c7c7c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 400;
+    margin: 0px 5px;
+    transition: all 0.2s ease-in-out;
+}
+
+.default-button:hover,
+.control-button:hover {
+    background-color: #e0e0e0;
+}
+
+.default-button:active,
+.control-button:active {
+    background-color: #c7c7c7;
 }
 
 .button-container {
@@ -148,6 +143,7 @@ body {
     border-radius: 40px;
     background-color: #ddd;
     outline: none;
+    margin-bottom: 24px;
 }
 
 .slider::-webkit-slider-thumb {
@@ -156,25 +152,11 @@ body {
     width: 76px;
     height: 42px;
     border-radius: 16px;
-    background-color: #1389ff;
     cursor: pointer;
 }
 
-.slider::-webkit-slider-thumb:before {
-    content: attr(data-value);
-    display: none;
-    position: absolute;
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40px;
-    height: 20px;
-    line-height: 20px;
-    text-align: center;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    border-radius: 5px;
-    font-size: 12px;
+.slider#hzRange::-webkit-slider-thumb {
+    background-color: #1389ff;
 }
 
 .audio-hz-slider input[type=range] {
@@ -205,10 +187,11 @@ span#hz-unit {
     font-size: 28px;
     margin-left: 14px;
     padding-bottom: 18px;
+    color:#797979;
 }
 
 div#blank-left {
-    flex: 2;
+    flex: 1;
 }
 
 div#blank-right {
@@ -267,12 +250,7 @@ div#blank-right {
         padding-bottom: 10px;
     }
 
-    .play-button {
-        border-radius: 22px;
-        margin: 5px 5px;
-    }
-    
-    .stop-button {
+    .default-button {
         border-radius: 22px;
         margin: 5px 5px;
     }
@@ -289,8 +267,7 @@ div#blank-right {
 @media screen and (max-width: 480px) {
 
     /* 在屏幕宽度小于等于480px时的样式 */
-    .play-button,
-    .stop-button {
+    .default-button {
         /* 调整按钮宽度 */
         width: 80px;
         /* 调整字体大小 */
