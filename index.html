@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>生成声音</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="main">
+            <div class="value-container">
+                <div id="blank-left"></div>
+                <input id="hzValue" />
+                <span id="hz-unit">Hz</span>
+                <div id="blank-right"></div>
+            </div>
+            <div class="slider-container">
+                <div class="audio-hz-slider">
+                    <input type="range" min="0" max="22050" value="400" class="slider" id="hzRange">
+                </div>
+            </div>
+            <div class="button-container">
+                <button onclick="playSound()" class="play-button">Play</button>
+                <button onclick="stopSound()" class="stop-button">Stop</button>
+            </div>
+        </div>
+        <div class="right">
+            <div class="output-container">
+                <div id="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
