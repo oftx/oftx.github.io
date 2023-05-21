@@ -1,3 +1,63 @@
+:root .light-theme {
+    --body-bg-color: #ffffff;
+    --topbar-background-color: #ffffff;
+    --topbar-text-color: #000000;
+    --theme-toggle-button-background-color: #ffffff;
+    --theme-toggle-button-text-color: #000000;
+    --theme-toggle-button-hover-background-color: #f2f2f2;
+    --theme-toggle-button-active-background-color: #e6e6e6;
+    --control-button-bg-color: #f8f8f8;
+    --control-button-border-color: #cccccc;
+    --control-button-color: #686868;
+    --default-button-bg-color: #f2f2f2;
+    --default-button-border-color: #c7c7c7;
+    --default-button-color: #686868;
+    --default-button-hover-bg-color: #e0e0e0;
+    --default-button-active-bg-color: #d6d6d6;
+    --output-container-color: #000000;
+    --output-container-bg-color: #f3f3f3;
+    --output-container-border-color: #000000;
+    --output-container-scrollbar-thumb-bg-color: #33333366;
+    --slider-bg-color: #ddd;
+    --slider-thumb-bg-color: #1389ff;
+    --input-border-color: #ddd;
+    --input-bg-color: #ffffff;
+    --input-color: #000000;
+    --span-hz-unit-color: #797979;
+    --github-logo-fill-color: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --body-bg-color: #000000;
+        --topbar-background-color: #000000;
+        --topbar-text-color: #ffffff;
+        --theme-toggle-button-background-color: #000000;
+        --theme-toggle-button-text-color: #ffffff;
+        --theme-toggle-button-hover-background-color: #333333;
+        --theme-toggle-button-active-background-color: #484848;
+        --control-button-bg-color: #333333;
+        --control-button-border-color: #4f4f4f;
+        --control-button-color: #ffffff;
+        --default-button-bg-color: #333333;
+        --default-button-border-color: #000000;
+        --default-button-color: #ccc;
+        --default-button-hover-bg-color: #444444;
+        --default-button-active-bg-color: #535353;
+        --output-container-color: #ccc;
+        --output-container-bg-color: #333333;
+        --output-container-border-color: #000000;
+        --output-container-scrollbar-thumb-bg-color: #ffffff66;
+        --slider-bg-color: #333333;
+        --slider-thumb-bg-color: #005cb8;
+        --input-border-color: #333333;
+        --input-bg-color: #333333;
+        --input-color: #cdcdcd;
+        --span-hz-unit-color: #797979;
+        --github-logo-fill-color: #ffffff;
+    }
+}
+
 body {
     height: 90vh;
     /* 设置body高度为视窗高度 */
@@ -7,7 +67,66 @@ body {
     /* 垂直居中 */
     justify-content: center;
     /* 水平居中 */
-    background-color: #cacaca;
+    background-color: var(--body-bg-color);
+    transition: all 1s ease-in-out;
+}
+
+.topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background-color: var(--topbar-background-color);
+    color: var(--topbar-text-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    padding: 0 20px;
+    transition: all 1s ease-in-out;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 1s ease-in-out;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 1s ease-in-out;
+}
+
+#theme-toggle {
+    background-color: var(--theme-toggle-button-background-color);
+    color: var(--theme-toggle-button-text-color);
+    font-size: 16px;
+    padding: 8px 12px;
+    margin: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    float: right;
+    transition: all 0.2s ease-in-out;
+}
+
+#theme-toggle:hover {
+    background-color: var(--theme-toggle-button-hover-background-color);
+    transition: all 0.2s ease-in-out;
+}
+
+#theme-toggle:active {
+    background-color: var(--theme-toggle-button-active-background-color);
+    transition: all 0.2s ease-in-out;
+}
+
+.octicon.octicon-mark-github.v-align-middle path {
+  fill: var(--github-logo-fill-color);
+  transition: all 1s ease-in-out;
 }
 
 .container {
@@ -32,8 +151,9 @@ body {
     width: 66px;
     height: 66px;
     border-radius: 33px;
-    background-color: #f8f8f8;
-    border: 1px solid #cccccc;
+    color: var(--control-button-color);
+    background-color: var(--control-button-bg-color);
+    border: 1px solid var(--control-button-border-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,8 +169,9 @@ body {
     width: 100px;
     height: 66px;
     border-radius: 18px;
-    background-color: #f2f2f2;
-    border: 2px solid #c7c7c7;
+    color: var(--default-button-color);
+    background-color: var(--default-button-bg-color);
+    border: 2px solid var(--default-button-border-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -63,12 +184,12 @@ body {
 
 .default-button:hover,
 .control-button:hover {
-    background-color: #e0e0e0;
+    background-color: var(--default-button-hover-bg-color);
 }
 
 .default-button:active,
 .control-button:active {
-    background-color: #c7c7c7;
+    background-color: var(--default-button-active-bg-color);
 }
 
 .button-container {
@@ -81,11 +202,13 @@ body {
 
 .output-container {
     border-radius: 12px;
-    background-color: #f3f3f3;
+    color: var(--output-container-color);
+    background-color: var(--output-container-bg-color);
     padding: 16px;
     height: 200px;
-    border: 1px solid black;
+    border: 1px solid var(--output-container-border-color);
     overflow-y: auto;
+    transition: all 1s ease-in-out;
 }
 
 .output-container::-webkit-scrollbar {
@@ -93,7 +216,7 @@ body {
 }
 
 .output-container::-webkit-scrollbar-thumb {
-    background-color: #33333366;
+    background-color: var(--output-container-scrollbar-thumb-bg-color);
     border-radius: 4px;
 }
 
@@ -141,7 +264,7 @@ body {
     width: 100%;
     height: 22px;
     border-radius: 40px;
-    background-color: #ddd;
+    background-color: var(--slider-bg-color);
     outline: none;
     margin-bottom: 24px;
 }
@@ -156,7 +279,7 @@ body {
 }
 
 .slider#hzRange::-webkit-slider-thumb {
-    background-color: #1389ff;
+    background-color: var(--slider-thumb-bg-color);
 }
 
 .audio-hz-slider input[type=range] {
@@ -169,7 +292,9 @@ input#hzValue {
     height: 78px;
     padding: 0px;
     font-size: 34px;
-    border: 1px solid #ddd;
+    color: var(--input-color);
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
     border-radius: 18px;
     text-align: center;
     /* 将输入框中的文本居中对齐 */
@@ -187,7 +312,7 @@ span#hz-unit {
     font-size: 28px;
     margin-left: 14px;
     padding-bottom: 18px;
-    color:#797979;
+    color: var(--span-hz-unit-color);
 }
 
 div#blank-left {
@@ -199,13 +324,6 @@ div#blank-right {
 }
 
 @media screen and (max-width: 768px) {
-
-    /* 在屏幕宽度小于等于768px时的样式 */
-    body {
-        /* 修改背景颜色 */
-        background-color: #ffffff;
-    }
-
     .container {
         /* 修改主容器为竖向排列 */
         flex-direction: column;
@@ -230,7 +348,7 @@ div#blank-right {
     }
 
     .value-container {
-        /* 调整布局为竖向排列 */
+        /* 调整布局为横向排列 */
         flex-direction: row;
         /* 调整高度 */
         height: auto;

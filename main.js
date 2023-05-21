@@ -3,6 +3,8 @@ var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 var oscillators = [];
 var slider = document.getElementById("hzRange");
 var output = document.getElementById("hzValue");
+const toggleButton = document.getElementById('theme-toggle');
+const body = document.body;
 const maxHz = 22050;
 
 const decreaseButton = document.getElementById("decrease");
@@ -154,3 +156,7 @@ function outputLog(text) {
   outputElem.appendChild(textNode);
   outputElem.appendChild(document.createElement('br'));
 }
+
+toggleButton.addEventListener('click', function () {
+  body.classList.toggle('light-theme');
+});
