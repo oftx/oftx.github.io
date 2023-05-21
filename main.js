@@ -15,6 +15,10 @@ const hzRangeSlider = document.getElementById("hzRange");
 let intervalId; // 记录长按定时器的 ID
 let timeoutId; // 记录点击定时器的 ID
 
+window.addEventListener('resize', function () {
+  outputLog("窗口大小发生变化, 当前" + window.innerWidth + "x" + window.innerHeight + "像素");
+});
+
 // 更新输入框和滑块的值
 function updateValue(newValue) {
   if (newValue < 0) {
@@ -151,6 +155,9 @@ function outputLog(text) {
   // 将文本节点添加到输出元素中
   outputElem.appendChild(textNode);
   outputElem.appendChild(document.createElement('br'));
+
+  // 将输出元素滚动到最后一个文本节点
+  outputElem.lastChild.scrollIntoView();
 }
 
 toggleButton.addEventListener('click', function () {
