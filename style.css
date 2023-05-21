@@ -45,8 +45,8 @@
         --default-button-hover-bg-color: #444444;
         --default-button-active-bg-color: #535353;
         --output-container-color: #ccc;
-        --output-container-bg-color: #333333;
-        --output-container-border-color: #000000;
+        --output-container-bg-color: #212121;
+        --output-container-border-color: #313131;
         --output-container-scrollbar-thumb-bg-color: #ffffff66;
         --slider-bg-color: #333333;
         --slider-thumb-bg-color: #005cb8;
@@ -206,7 +206,7 @@ body {
     background-color: var(--output-container-bg-color);
     padding: 16px;
     height: 200px;
-    border: 1px solid var(--output-container-border-color);
+    border: 2px solid var(--output-container-border-color);
     overflow-y: auto;
     transition: all 1s ease-in-out;
 }
