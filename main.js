@@ -115,10 +115,6 @@ output.oninput = function () {
   slider.value = this.value;
 }
 
-document.getElementById('hzValue').addEventListener('focus', function () {
-  window.scrollTo(0, 0);
-});
-
 function playSound() {
   // 创建OscillatorNode对象，生成声音
   var oscillator = audioContext.createOscillator();
