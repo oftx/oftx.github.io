@@ -156,6 +156,22 @@ function outputLog(text) {
   outputElem.lastChild.scrollIntoView();
 }
 
-toggleButton.addEventListener('click', function () {
-  body.classList.toggle('light-theme');
+toggleButton.addEventListener('click', function() {
+  const body = document.body;
+  if (body.classList.contains('light-theme')) {
+    setTheme('dark');
+  } else {
+    setTheme('light');
+  }
 });
+
+function setTheme(theme) {
+  const body = document.body;
+  if (theme === 'light') {
+    body.classList.remove('dark-theme');
+    body.classList.add('light-theme');
+  } else if (theme === 'dark') {
+    body.classList.remove('light-theme');
+    body.classList.add('dark-theme');
+  }
+}

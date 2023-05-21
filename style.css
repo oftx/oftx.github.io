@@ -1,4 +1,4 @@
-:root .light-theme {
+.light-theme {
     --body-bg-color: #ffffff;
     --topbar-background-color: #ffffff;
     --topbar-text-color: #000000;
@@ -25,6 +25,66 @@
     --input-color: #000000;
     --span-hz-unit-color: #797979;
     --github-logo-fill-color: #000000;
+}
+
+.dark-theme {
+    --body-bg-color: #000000;
+    --topbar-background-color: #000000;
+    --topbar-text-color: #ffffff;
+    --theme-toggle-button-background-color: #000000;
+    --theme-toggle-button-text-color: #ffffff;
+    --theme-toggle-button-hover-background-color: #333333;
+    --theme-toggle-button-active-background-color: #484848;
+    --control-button-bg-color: #333333;
+    --control-button-border-color: #4f4f4f;
+    --control-button-color: #ffffff;
+    --default-button-bg-color: #333333;
+    --default-button-border-color: #000000;
+    --default-button-color: #ccc;
+    --default-button-hover-bg-color: #444444;
+    --default-button-active-bg-color: #535353;
+    --output-container-color: #ccc;
+    --output-container-bg-color: #212121;
+    --output-container-border-color: #313131;
+    --output-container-scrollbar-thumb-bg-color: #ffffff66;
+    --slider-bg-color: #333333;
+    --slider-thumb-bg-color: #005cb8;
+    --input-border-color: #333333;
+    --input-bg-color: #333333;
+    --input-color: #cdcdcd;
+    --span-hz-unit-color: #797979;
+    --github-logo-fill-color: #ffffff;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --body-bg-color: #ffffff;
+        --topbar-background-color: #ffffff;
+        --topbar-text-color: #000000;
+        --theme-toggle-button-background-color: #ffffff;
+        --theme-toggle-button-text-color: #000000;
+        --theme-toggle-button-hover-background-color: #f2f2f2;
+        --theme-toggle-button-active-background-color: #e6e6e6;
+        --control-button-bg-color: #f8f8f8;
+        --control-button-border-color: #cccccc;
+        --control-button-color: #686868;
+        --default-button-bg-color: #f2f2f2;
+        --default-button-border-color: #c7c7c7;
+        --default-button-color: #686868;
+        --default-button-hover-bg-color: #e0e0e0;
+        --default-button-active-bg-color: #d6d6d6;
+        --output-container-color: #000000;
+        --output-container-bg-color: #f3f3f3;
+        --output-container-border-color: #c5c5c5;
+        --output-container-scrollbar-thumb-bg-color: #33333366;
+        --slider-bg-color: #ddd;
+        --slider-thumb-bg-color: #1389ff;
+        --input-border-color: #ddd;
+        --input-bg-color: #ffffff;
+        --input-color: #000000;
+        --span-hz-unit-color: #797979;
+        --github-logo-fill-color: #000000;
+    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -125,8 +185,8 @@ body {
 }
 
 .octicon.octicon-mark-github.v-align-middle path {
-  fill: var(--github-logo-fill-color);
-  transition: all 1s ease-in-out;
+    fill: var(--github-logo-fill-color);
+    transition: all 1s ease-in-out;
 }
 
 .container {
