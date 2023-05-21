@@ -104,6 +104,7 @@ decreaseButton.addEventListener("touchend", handleDecreaseRelease);
 increaseButton.addEventListener("touchend", handleIncreaseRelease);
 
 outputLog("在点击“播放”按钮前请检查音量");
+matchTheme();
 
 output.value = slider.value;
 
@@ -173,5 +174,13 @@ function setTheme(theme) {
   } else if (theme === 'dark') {
     body.classList.remove('light-theme');
     body.classList.add('dark-theme');
+  }
+}
+
+function matchTheme() {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    setTheme('dark');
+  } else {
+    setTheme('light');
   }
 }
