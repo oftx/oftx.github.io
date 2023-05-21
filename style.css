@@ -106,7 +106,7 @@ body {
     color: var(--theme-toggle-button-text-color);
     font-size: 16px;
     padding: 8px 12px;
-    margin: 16px;
+    margin: 0px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
