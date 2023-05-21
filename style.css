@@ -233,7 +233,7 @@ body {
     justify-content: center;
 }
 
-.right {
+.left {
     flex: 3;
     margin-left: 20px;
     padding: 8px;
@@ -338,13 +338,14 @@ div#blank-right {
         margin-right: 0;
     }
 
-    .right {
+    .left {
         /* 修改宽度为100% */
-        width: 100%;
+        width: 88%;
         /* 移除左侧边距 */
         margin-left: 0;
         /* 调整内边距 */
         padding: 0;
+        margin-bottom: 64px;
     }
 
     .value-container {
