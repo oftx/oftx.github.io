@@ -145,9 +145,13 @@
             startRight();
         }
 
+        function isDarkTheme() {
+            return document.body.style.backgroundColor === "black";
+        }
+
         function playAudio(LeftOrRight, hz, waveType) {
             const outputContainer = document.querySelector('.output-container');
-            outputContainer.innerHTML += `<div class='message'>${LeftOrRight} | ${waveType} | ${hz}Hz</div>`;
+            outputContainer.innerHTML += `<div class='message' style='color:${isDarkTheme()?"#e0e0e0":"#1e1e1e"};'>${LeftOrRight} | ${waveType} | ${hz}Hz</div>`;
             outputContainer.scrollTop = outputContainer.scrollHeight;
 
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
