@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
+    <title>Freq</title>
+</head>
+<body>
+    <div class="header">
+        <div class="header-container">
+            <div class="title">Freq</div>
+            <div style="width: 70vw;"></div>
+            <div class="toggle-theme">
+                <button class="toggle-theme-button">Theme</button>
+            </div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="output-container">
+            <div class="message">Please check the volume before starting.</div>
+        </div>
+        <div class="content1">
+            <div class="control-left">
+                <div class="label">Left</div>
+                <div class="controls">
+                    <div class="number-container">
+                        <input type="number" class="hz-value" value="97">
+                    </div>
+                </div>
+                <button class="toggle" onclick="playAudio('left', document.querySelector('.control-left .hz-value').value, 'sine')">Start</button>
+            </div>
+            <div class="control-right">
+                <div class="label">Right</div>
+                <div class="controls">
+                    <div class="number-container">
+                        <input type="number" class="hz-value" value="107">
+                    </div>
+                </div>
+                <button class="toggle" onclick="playAudio('right', document.querySelector('.control-right .hz-value').value, 'sine')">Start</button>
+            </div>
+        </div>
+        <div class="content2">
+            <button class="toggle">Start All</button>
+            <div style="width: 20px;"></div>
+            <button class="toggle" onclick="setNeedStop(1)">Stop All</button>
+        </div>
+    </div>
+    <div class="footer">
+        <a href="https://github.com/oftx/oftx.github.io" class="github-link">GitHub</a>
+    </div>
+    <script>
+        let needStop = 0;
+        let canOutput = true;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const toggleButton = document.querySelector('.toggle-theme button');
+            const allButtons = document.querySelectorAll("button");
+            const allInputs = document.querySelectorAll("input");
+
+            document.body.style.backgroundColor = "black";
+            document.body.style.color = "#e0e0e0";
+
+            toggleButton.addEventListener('click', function() {
+                const messageElements = document.querySelectorAll('.message');
+
+                if (document.body.style.backgroundColor === "black") {
+                    document.body.style.backgroundColor = "white";
+                    document.body.style.color = "black";
+                    allButtons.forEach((e) => {
+                        e.style.border = '2px solid #3e3e3e';
+                        e.style.backgroundColor = '#44444400';
+                        e.style.color = '#000';
+                    });
+                    allInputs.forEach((e) => {
+                        e.style.backgroundColor = '#33333300';
+                        e.style.color = '#000';
+                    });
+                    messageElements.forEach((e) => {
+                        e.style.color = '#1e1e1e';
+                    });
+                } else {
+                    document.body.style.backgroundColor = "black";
+                    document.body.style.color = "#e0e0e0";
+                    allButtons.forEach((e) => {
+                        e.style.border = '';
+                        e.style.backgroundColor = '#444';
+                        e.style.color = '#e0e0e0';
+                    });
+                    allInputs.forEach((e) => {
+                        e.style.backgroundColor = '#333';
+                        e.style.color = '#e0e0e0';
+                    });
+                    messageElements.forEach((e) => {
+                        e.style.color = '#e0e0e0';
+                    });
+                }
+            });
+        });
+
+        function setNeedStop(value) {
+            needStop = value;
+        }
+
+        function playAudio(LeftOrRight, hz, waveType) {
+            const outputContainer = document.querySelector('.output-container');
+            outputContainer.innerHTML += `<div class='message'>${LeftOrRight} | ${waveType} | ${hz}Hz</div>`;
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = waveType;
+            oscillator.frequency.setValueAtTime(hz, audioContext.currentTime);
+
+            const panNode = audioContext.createStereoPanner();
+            panNode.pan.value = LeftOrRight === 'left' ? -1 : 1; // 左声道为-1，右声道为1
+            oscillator.connect(panNode);
+            panNode.connect(audioContext.destination);
+
+            oscillator.start();
+            const checkNeedStop = setInterval(() => {
+                if (needStop === 1) {
+                    oscillator.stop();
+                    clearInterval(checkNeedStop);
+                    setTimeout(() => {
+                        setNeedStop(0);
+                    }, 120);
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

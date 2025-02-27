@@ -1,0 +1,209 @@
+body {
+    background-color: black; 
+    color: #e0e0e0; 
+    font-size: min(max(2.4vh, 16px), 16px);
+    margin: 0;
+    font-family: "Noto Sans Mono", "Noto Sans SC";
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+    transition: all 1s ease;
+}
+
+.header {
+    height: max(5vh, 29px);
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    position: fixed;
+    width: 100%;
+    top: 0;
+}
+
+.content {
+    
+    height: calc(100vh - max(5vh, 50px) - max(5vh, 29px));
+    margin-top: max(5vh, 29px);
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.footer {
+    height: max(5vh, 50px);
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.header-container {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    width: 95vw;
+    height: 100%;
+}
+
+.title {
+    float: left;
+}
+
+.toggle-theme {
+    
+    float: right;
+}
+
+.control-left {
+    
+    margin-left: 2.5vw;
+    margin-right: 2.5vw;
+    width: min(45%, 302px);
+    height: min(100%, 800px);
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.control-right {
+    
+    margin-right: 2.5vw;
+    width: min(45%, 302px);
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.content1 {
+    
+    height: 36%;
+    width: min(70%, 445px);
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.content2 {
+    
+    height: 20%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.output-container {
+    border-radius: 12px;
+    color: #ccc;
+    padding: 16px;
+    margin-top: 10vh;
+    height: 36%;
+    width: min(max(35vw, 256px), 514px);
+    border: 2px solid #313131;
+    overflow-y: auto;
+}
+
+.output-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.output-container::-webkit-scrollbar-thumb {
+    background-color: #ffffff66;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #444; 
+    color: #e0e0e0; 
+    border: none;
+    /* padding: 1vw 2vw; */
+    font-family: "Noto Sans Mono";
+    cursor: pointer;
+    transition: all 0.5s ease;
+}
+
+button:hover {
+    background-color: #555; 
+}
+
+button:active {
+    background-color: #666; 
+}
+
+input {
+    width: 50%;
+    padding: 10px;
+    border: 2px solid #666; 
+    border-radius: 8px;
+    font-family: "Noto Sans Mono";
+    font-size: min(max(2.4vh, 16px), 16px);
+    color: #e0e0e0; 
+    background-color: #333; 
+    text-align: center;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-color: #888; 
+    outline: none;
+    background-color: #444; 
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.hz-controls {
+    margin-top: 10px;
+}
+
+.toggle {
+    width: min(50%, 20vw, 218px);
+    padding: 0.8vh 0.5vw;
+    
+    border-radius: 8px;
+    font-size: min(max(2.4vh, 16px), 16px);
+}
+
+.number-container {
+    margin: 10px 0px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.number-container::after {
+    content: "Hz";
+    color: #777777; 
+    position: relative;
+    margin-left: -36px;
+    font-size: min(max(2.4vh, 16px), 16px);
+    top: 0px;
+    left: -4px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.number-container:hover::after {
+    z-index: -999;
+}
+
+.hz-span {
+    margin-left: 5px;
+}
+
+a {
+    text-decoration: none;
+    color: #777777; 
+}
+
+.toggle-theme-button {
+    padding: 1vh 2vw;
+}
