@@ -44,7 +44,7 @@
             </div>
         </div>
         <div class="content2">
-            <button class="toggle">Start All</button>
+            <button class="toggle" onclick="startAll()">Start All</button>
             <div style="width: 20px;"></div>
             <button class="toggle" onclick="setNeedStop(1)">Stop All</button>
         </div>
@@ -103,6 +103,13 @@
 
         function setNeedStop(value) {
             needStop = value;
+        }
+
+        function startAll() {
+            hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-left .hz-value').value));
+            playAudio('left', hzValue, 'sine');
+            hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-right .hz-value').value));
+            playAudio('right', hzValue, 'sine');
         }
 
         function playAudio(LeftOrRight, hz, waveType) {
