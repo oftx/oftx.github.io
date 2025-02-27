@@ -28,16 +28,16 @@
                 <div class="label">Left</div>
                 <div class="controls">
                     <div class="number-container">
-                        <input type="number" class="hz-value" value="97">
+                        <input type="number" class="hz-value" value="97" min="0" max="22050">
                     </div>
                 </div>
-                <button class="toggle" onclick="playAudio('left', document.querySelector('.control-left .hz-value').value, 'sine')">Start</button>
+                <button class="toggle" onclick="playAudio('left', Math.min(Math.max(document.querySelector('.control-left .hz-value').value, 0), 22050), 'sine')">Start</button>
             </div>
             <div class="control-right">
                 <div class="label">Right</div>
                 <div class="controls">
                     <div class="number-container">
-                        <input type="number" class="hz-value" value="107">
+                        <input type="number" class="hz-value" value="107" min="0" max="22050">
                     </div>
                 </div>
                 <button class="toggle" onclick="playAudio('right', document.querySelector('.control-right .hz-value').value, 'sine')">Start</button>
