@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Frequency Sound Generator - Generate sounds of different frequencies, supporting various waveforms.">
+    <meta name="keywords" content="sound generator, frequency, waveform, music, audio">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
-    <title>Freq</title>
+    <title>Frequency Sound Generator</title>
 </head>
 <body>
     <div class="header">
         <div class="header-container">
-            <div class="title">Freq</div>
+            <div class="title">FreqSndGen</div>
             <div style="width: 70vw;"></div>
             <div class="toggle-theme">
                 <button class="toggle-theme-button">Theme</button>
@@ -72,6 +74,7 @@
             const toggleButton = document.querySelector('.toggle-theme button');
             const allButtons = document.querySelectorAll("button");
             const allInputs = document.querySelectorAll("input");
+            const allSelects = document.querySelectorAll("select");
 
             document.body.style.backgroundColor = "black";
             document.body.style.color = "#e0e0e0";
@@ -85,14 +88,18 @@
                     allButtons.forEach((e) => {
                         e.style.border = '2px solid #3e3e3e';
                         e.style.backgroundColor = '#44444400';
-                        e.style.color = '#000';
+                        e.style.color = '#1e1e1e';
                     });
                     allInputs.forEach((e) => {
                         e.style.backgroundColor = '#33333300';
-                        e.style.color = '#000';
+                        e.style.color = '#1e1e1e';
                     });
                     messageElements.forEach((e) => {
                         e.style.color = '#1e1e1e';
+                    });
+                    allSelects.forEach((e) => {
+                        e.style.color = '#1e1e1e';
+                        e.style.backgroundColor = '#33333300';
                     });
                 } else {
                     document.body.style.backgroundColor = "black";
@@ -108,6 +115,10 @@
                     });
                     messageElements.forEach((e) => {
                         e.style.color = '#e0e0e0';
+                    });
+                    allSelects.forEach((e) => {
+                        e.style.color = '#e0e0e0';
+                        e.style.backgroundColor = '#444';
                     });
                 }
             });
