@@ -31,7 +31,13 @@
                         <input type="number" class="hz-value" value="97">
                     </div>
                 </div>
-                <button class="toggle" onclick="hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-left .hz-value').value)); playAudio('left', hzValue, 'sine')">Start</button>
+                <select name="wave-shape" id="wave-shape-select" class="left">
+                    <option value="sine">sine</option>
+                    <option value="square">square</option>
+                    <option value="sawtooth">sawtooth</option>
+                    <option value="triangle">triangle</option>
+                </select>
+                <button class="toggle" onclick="startLeft()">Start</button>
             </div>
             <div class="control-right">
                 <div class="label">Right</div>
@@ -40,7 +46,13 @@
                         <input type="number" class="hz-value" value="107">
                     </div>
                 </div>
-                <button class="toggle" onclick="hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-right .hz-value').value)); playAudio('right', hzValue, 'sine')">Start</button>
+                <select name="wave-shape" id="wave-shape-select" class="right">
+                    <option value="sine">sine</option>
+                    <option value="square">square</option>
+                    <option value="sawtooth">sawtooth</option>
+                    <option value="triangle">triangle</option>
+                </select>
+                <button class="toggle" onclick="startRight()">Start</button>
             </div>
         </div>
         <div class="content2">
@@ -105,11 +117,21 @@
             needStop = value;
         }
 
+        function startLeft() {
+            const waveType = document.querySelector('.control-left select').value;
+            const hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-left .hz-value').value));
+            playAudio('left', hzValue, waveType);
+        }
+
+        function startRight() {
+            const waveType = document.querySelector('.control-right select').value;
+            const hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-right .hz-value').value));
+            playAudio('right', hzValue, waveType);
+        }
+
         function startAll() {
-            hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-left .hz-value').value));
-            playAudio('left', hzValue, 'sine');
-            hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-right .hz-value').value));
-            playAudio('right', hzValue, 'sine');
+            startLeft();
+            startRight();
         }
 
         function playAudio(LeftOrRight, hz, waveType) {
