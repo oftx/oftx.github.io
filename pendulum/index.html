@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Double Pendulum with Color-mapped Trails</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            background-color: white; /* 默认背景色 */
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background-color: #121212; /* 深色模式背景色 */
+            color: #e0e0e0; /* 深色模式文字颜色 */
+        }
+
+        #control-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #control-container:hover {
+            opacity: 1;
+        }
+
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #controls label {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: white;
+            color: black;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        body.dark-mode button {
+            background-color: #1e88e5;
+        }
+
+        body.dark-mode button:hover {
+            background-color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+<div id="control-container">
+    <div id="controls">
+        <label>Gravity <input type="range" id="gravitySlider" min="0.1" max="2" step="0.1" value="0.5"></label>
+        <label>Friction <input type="range" id="frictionSlider" min="0" max="1" step="0.01" value="0.99"></label>
+        <label>Rod Length <input type="range" id="lengthSlider" min="50" max="200" step="1" value="100"></label>
+        <label>跟随缩放倍数 <input type="range" id="zoomSlider" min="0.1" max="20" step="0.1" value="1"></label>
+        <label>普通缩放倍数 <input type="range" id="normalZoomSlider" min="0.1" max="20" step="0.1" value="1"></label>
+        <label>Init Speed <input type="text" id="speedInput"></label>
+        <button id="toggleCameraBtn">Toggle Camera (C)</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="toggleDarkModeBtn">切换深色模式</button>
+        <button id="exportTrailBtn">导出轨迹</button>
+        <button id="exportPendulumBtn">导出摆锤</button>
+    </div>
+</div>
+<script>
+    let pendulums = [];
+    let gravity = 0.25;
+    let friction = 1;
+    let paused = false;
+    let hidePendulum = true;
+    let trailSegments = [];
+    let dragged = null;
+    let prevColorAngle = null;
+    let darkmode = 0;
+    const maxCurveCount = 20000;
+    const curveWidth = 1;
+    const pendulumCount = 2;
+    
+    let cameraFollow = false; // 是否开启摄像机跟随
+    let zoomFactor = 3; // 跟随状态缩放因子
+    let normalZoomFactor = 1; // 普通状态缩放因子
+    let panX = 0; // 水平平移量
+    let panY = 0; // 垂直平移量
+    
+    // 平滑过渡相关变量
+    let currentZoom = 1; // 当前实际缩放值
+    let targetZoom = 1; // 目标缩放值
+    let currentOffsetX = 0; // 当前X偏移
+    let currentOffsetY = 0; // 当前Y偏移
+    let targetOffsetX = 0; // 目标X偏移
+    let targetOffsetY = 0; // 目标Y偏移
+    const transitionSpeed = 0.1; // 过渡速度因子
+    
+    let pendulumCanvas, trailCanvas;
+    
+    class Pendulum {
+        constructor(x, y, length, angle, angleVel) {
+            this.origin = createVector(x, y);
+            this.length = length;
+            this.angle = angle;
+            this.angleVel = angleVel ? angleVel : random(-0.1, 0.1);
+            this.angleAcc = 0;
+            this.bob = createVector();
+            this.updateBob();
+        }
+    
+        updateBob() {
+            this.bob.set(
+                this.origin.x + this.length * sin(this.angle),
+                this.origin.y + this.length * cos(this.angle)
+            );
+        }
+    
+        applyPhysics(prevBob) {
+            let force = -gravity * sin(this.angle);
+            this.angleAcc = force / this.length;
+            this.angleVel += this.angleAcc;
+            this.angleVel *= friction;
+            this.angle += this.angleVel;
+            this.origin = prevBob;
+            this.updateBob();
+        }
+    
+        show() {
+            if (!hidePendulum) {
+                pendulumCanvas.stroke(darkmode ? 255 : 0, darkmode ? 255 : 0, darkmode ? 255 : 0, 255);
+                pendulumCanvas.strokeWeight(0.5);
+                pendulumCanvas.line(this.origin.x, this.origin.y, this.bob.x, this.bob.y);
+                pendulumCanvas.fill(darkmode ? 255 : 0, darkmode ? 255 : 0, darkmode ? 255 : 0, 255);
+                pendulumCanvas.circle(this.bob.x, this.bob.y, Math.E);
+            }
+        }
+    }
+    
+    function setup() {
+        pendulumCanvas = createGraphics(windowWidth, windowHeight);
+        trailCanvas = createGraphics(windowWidth, windowHeight);
+        
+        let mainCanvas = createCanvas(windowWidth, windowHeight);
+        const speedInputElement = document.querySelector('#speedInput');
+        pixelDensity(4);
+        strokeCap(ROUND);
+        mainCanvas.position(0, 0);
+        mainCanvas.style('position', 'fixed');
+        mainCanvas.style('top', '0');
+        mainCanvas.style('left', '0');
+        mainCanvas.style('z-index', '-1');
+        mainCanvas.style('background', 'transparent');
+    
+        let origin = createVector(width / 2, height / 2);
+        let speed = 0.1 - (Math.random() - 0.5) / 10;
+        speedInputElement.value += `${speed} `;
+        pendulums.push(new Pendulum(origin.x, origin.y, Math.random() * 50 + 100, PI / 4, speed));
+        for (let i = 1; i < pendulumCount; i++) {
+            speed = Math.random() / 6;
+            speedInputElement.value += `${speed} `;
+            pendulums.push(new Pendulum(0, 0, Math.random() * 50 + 100, PI / 3, speed));
+        }
+    
+        document.getElementById("toggleCameraBtn").onclick = () => {
+            cameraFollow = !cameraFollow;
+        };
+        
+        document.getElementById("zoomSlider").value = zoomFactor;
+        document.getElementById("normalZoomSlider").value = normalZoomFactor;
+
+        // 深色模式切换按钮事件
+        document.getElementById("toggleDarkModeBtn").onclick = () => {
+            darkmode = 1 - darkmode;
+            document.body.classList.toggle("dark-mode");
+        };
+        
+        // 导出轨迹按钮事件
+        document.getElementById("exportTrailBtn").onclick = () => {
+            exportCanvas(trailCanvas);
+        };
+        
+        // 导出摆锤按钮事件
+        document.getElementById("exportPendulumBtn").onclick = () => {
+            exportCanvas(pendulumCanvas);
+        };
+    }
+    
+    // 导出画布为透明背景图像
+    function exportCanvas(canvas) {
+        // 创建临时画布用于导出
+        let exportCanvas = createGraphics(windowWidth, windowHeight);
+        exportCanvas.clear(); // 确保背景透明
+        exportCanvas.image(canvas, 0, 0);
+        
+        // 将画布转换为数据URL并下载
+        let dataURL = exportCanvas.canvas.toDataURL('image/png');
+        let link = document.createElement('a');
+        link.download = `pendulum_export_${Date.now()}.png`;
+        link.href = dataURL;
+        link.click();
+        
+        // 清理
+        exportCanvas.remove();
+    }
+    
+    function draw() {
+        clear();
+        pendulumCanvas.background(darkmode ? 0 : 255, darkmode ? 0 : 255, darkmode ? 0 : 255, 200);
+        trailCanvas.clear();
+    
+        // 计算目标缩放和偏移
+        if (cameraFollow) {
+            const target = pendulums[pendulums.length - 1].bob;
+            targetZoom = zoomFactor;
+            targetOffsetX = width / 2 - target.x * zoomFactor;
+            targetOffsetY = height / 2 - target.y * zoomFactor;
+        } else {
+            targetZoom = normalZoomFactor;
+            targetOffsetX = panX;
+            targetOffsetY = panY;
+        }
+        
+        // 平滑过渡
+        currentZoom += (targetZoom - currentZoom) * transitionSpeed;
+        currentOffsetX += (targetOffsetX - currentOffsetX) * transitionSpeed;
+        currentOffsetY += (targetOffsetY - currentOffsetY) * transitionSpeed;
+        
+        // 应用变换
+        pendulumCanvas.push();
+        trailCanvas.push();
+        
+        if (cameraFollow) {
+            pendulumCanvas.translate(currentOffsetX, currentOffsetY);
+            pendulumCanvas.scale(currentZoom);
+            
+            trailCanvas.translate(currentOffsetX, currentOffsetY);
+            trailCanvas.scale(currentZoom);
+        } else {
+            pendulumCanvas.translate(width/2 + currentOffsetX, height/2 + currentOffsetY);
+            pendulumCanvas.scale(currentZoom);
+            pendulumCanvas.translate(-width/2, -height/2);
+            
+            trailCanvas.translate(width/2 + currentOffsetX, height/2 + currentOffsetY);
+            trailCanvas.scale(currentZoom);
+            trailCanvas.translate(-width/2, -height/2);
+        }
+    
+        let prevBob = createVector(width / 2, height / 2);
+        
+        for (let p of pendulums) {
+            if (!paused && dragged !== p) {
+                p.applyPhysics(prevBob);
+            }
+            p.show();
+            prevBob = p.bob.copy();
+        }
+    
+        if (!paused) {
+            let angleDeg = degrees(pendulums[pendulums.length - 1].angle);
+            angleDeg = (angleDeg + 360) % 360;
+            if (angleDeg > 180) angleDeg -= 360;
+    
+            let mappedColorAngle = round(angleDeg / 10) * 10;
+            if (prevColorAngle === null || abs(mappedColorAngle - prevColorAngle) >= 10) {
+                prevColorAngle = mappedColorAngle;
+                let h = map(mappedColorAngle, -180, 180, 0, 360);
+                h = (h + 360) % 360;
+                let newColor = `hsl(${h},50%,50%)`;
+    
+                let newSegmentPoints = [];
+                if (trailSegments.length > 0) {
+                    let lastSegment = trailSegments[trailSegments.length - 1];
+                    let lastPoint = lastSegment.points[lastSegment.points.length - 1];
+                    newSegmentPoints.push(lastPoint.copy());
+                }
+    
+                trailSegments.push({color: newColor, points: newSegmentPoints});
+                if (trailSegments.length > maxCurveCount) trailSegments.shift();
+            }
+            trailSegments[trailSegments.length - 1].points.push(prevBob.copy());
+        }
+    
+        for (let segment of trailSegments) {
+            trailCanvas.noFill();
+            trailCanvas.stroke(segment.color);
+            trailCanvas.strokeWeight(curveWidth);
+            trailCanvas.beginShape();
+            for (let pt of segment.points) {
+                trailCanvas.vertex(pt.x, pt.y);
+            }
+            trailCanvas.endShape();
+        }
+    
+        pendulumCanvas.pop();
+        trailCanvas.pop();
+    
+        image(pendulumCanvas, 0, 0);
+        image(trailCanvas, 0, 0);
+    }
+    
+    function mousePressed() {
+        for (let p of pendulums) {
+            if (dist(mouseX, mouseY, p.bob.x, p.bob.y) < 10) {
+                dragged = p;
+                break;
+            }
+        }
+    }
+    
+    function mouseDragged() {
+        if (dragged) {
+            dragged.bob.set(mouseX, mouseY);
+            dragged.angle = atan2(mouseX - dragged.origin.x, mouseY - dragged.origin.y);
+            dragged.angleVel = 0;
+        }
+    }
+    
+    function mouseReleased() {
+        dragged = null;
+    }
+    
+    function keyPressed() {
+        if (key === 'A' || key === 'a') {
+            let last = pendulums[pendulums.length - 1];
+            pendulums.push(new Pendulum(last.bob.x, last.bob.y, 100, random(TWO_PI)));
+        } else if ((key === 'D' || key === 'd') && pendulums.length > 1) {
+            pendulums.pop();
+        } else if (key === 'H' || key === 'h') {
+            hidePendulum = !hidePendulum;
+        } else if (key === 'C' || key === 'c') {
+            cameraFollow = !cameraFollow;
+        } else if (key === 'Z' || key === 'z') {
+            // 缩小视图
+            if (cameraFollow) {
+                zoomFactor = max(0.5, zoomFactor - 0.5);
+                document.getElementById("zoomSlider").value = zoomFactor;
+            } else {
+                normalZoomFactor = max(0.5, normalZoomFactor - 0.5);
+                document.getElementById("normalZoomSlider").value = normalZoomFactor;
+            }
+        } else if (key === 'X' || key === 'x') {
+            // 放大视图
+            if (cameraFollow) {
+                zoomFactor = min(20, zoomFactor + 0.5);
+                document.getElementById("zoomSlider").value = zoomFactor;
+            } else {
+                normalZoomFactor = min(20, normalZoomFactor + 0.5);
+                document.getElementById("normalZoomSlider").value = normalZoomFactor;
+            }
+        } else if (keyCode === LEFT_ARROW) {
+            // 向左移动画布
+            panX -= 20;
+        } else if (keyCode === RIGHT_ARROW) {
+            // 向右移动画布
+            panX += 20;
+        } else if (keyCode === UP_ARROW) {
+            // 向上移动画布
+            panY -= 20;
+        } else if (keyCode === DOWN_ARROW) {
+            // 向下移动画布
+            panY += 20;
+        }
+    }
+    
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+        pendulumCanvas.resizeCanvas(windowWidth, windowHeight);
+        trailCanvas.resizeCanvas(windowWidth, windowHeight);
+    }
+    
+    document.getElementById("gravitySlider").oninput = function () {
+        gravity = parseFloat(this.value);
+    };
+    document.getElementById("frictionSlider").oninput = function () {
+        friction = parseFloat(this.value);
+    };
+    document.getElementById("lengthSlider").oninput = function () {
+        for (let p of pendulums) {
+            p.length = parseFloat(this.value);
+        }
+    };
+    document.getElementById("zoomSlider").oninput = function () {
+        zoomFactor = parseFloat(this.value);
+    };
+    document.getElementById("normalZoomSlider").oninput = function () {
+        normalZoomFactor = parseFloat(this.value);
+    };
+    document.getElementById("pauseBtn").onclick = function () {
+        paused = !paused;
+        this.textContent = paused ? "Resume" : "Pause";
+    };
+</script>
+</body>
+</html>
