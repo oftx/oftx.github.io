@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>节肢动物模拟</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+        body.dark-mode {
+            background-color: #1a1a1a;
+        }
+        canvas {
+            display: block;
+        }
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease, background 0.3s ease;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-width: 90%;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+        }
+        .controls:hover {
+            opacity: 1;
+        }
+        body.dark-mode .controls {
+            background: rgba(40, 40, 40, 0.9);
+            box-shadow: 0 -2px 10px rgba(255, 255, 255, 0.1);
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        .control-group label {
+            white-space: nowrap;
+            color: #333;
+        }
+        body.dark-mode .control-group label {
+            color: #ddd;
+        }
+        .control-group input[type="range"] {
+            width: 80px;
+            margin: 0;
+            padding: 0;
+        }
+        .control-group input[type="checkbox"] {
+            margin: 0;
+        }
+        .control-group span {
+            min-width: 30px;
+            text-align: right;
+            color: #666;
+        }
+        body.dark-mode .control-group span {
+            color: #aaa;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="controls"></div>
+    <script>
+        // 可调参数
+        let canvasWidth = window.innerWidth;
+        let canvasHeight = window.innerHeight;
+        let backgroundColor = 40;
+        const circleRadius = 60;
+        const segmentLength = circleRadius / 2;
+        const lineWeight = 4;
+        const pointSize = 16;
+        const legPointSize = 3;
+        const eyeRadius = 15;
+        const eyeDistance = 25;
+        let numCircles = 32;  // 改为可变参数
+        const legSegments = 3;
+        let legLength = 10;
+        const rectWidth = 30;
+        const rectHeight = 40;
+        const rectCorner = 10;
+
+        // 头部触角参数
+        const antennaSegments = 6;
+        const antennaPointSize = 1.5;
+        let antennaLength = 22;
+        let antennaBaseLength = 10;
+        let antennaBendAngle = Math.PI / 6;
+        const antennaDampings = [0.99, 0.985, 0.98, 0.975, 0.97];
+        const antennaBaseOffset = 2;
+
+        // 尾部触角参数
+        let tailAntennaLength = 18;
+        let tailAntennaBaseLength = 8;
+        let tailAntennaBendAngle = Math.PI / 6;
+        const tailAntennaDampings = [0.64, 0.62, 0.6, 0.55, 0.5];
+
+        let circles = Array(numCircles).fill().map(() => ({x: canvasWidth/2, y: canvasHeight/2}));
+        let leftLegs = [];
+        let rightLegs = [];
+        let leftLegTargets = [];
+        let rightLegTargets = [];
+        let leftLegMoving = [];
+        let rightLegMoving = [];
+        let lastPositions = [];
+        
+        let leftAntenna = { points: [], velocities: [], lengths: [] };
+        let rightAntenna = { points: [], velocities: [], lengths: [] };
+        let leftTailAntenna = { points: [], velocities: [], lengths: [] };
+        let rightTailAntenna = { points: [], velocities: [], lengths: [] };
+
+        let isFullScreen = true;
+        let isDarkMode = true;
+        let isRandomMovement = true;
+        let isBackgroundTransparent = true;
+        let targetX, targetY, velocityX, velocityY;
+
+        // 连杆摆参数
+        let gravity = 0.05;
+        let friction = 1;
+        let pendulums = [];
+
+        class Pendulum {
+            constructor(x, y, length, angle, angleVel) {
+                this.origin = { x: x, y: y };
+                this.length = length;
+                this.angle = angle;
+                this.angleVel = angleVel ? angleVel : random(-0.1, 0.1);
+                this.angleAcc = 0;
+                this.bob = { x: 0, y: 0 };
+                this.updateBob();
+            }
+        
+            updateBob() {
+                this.bob.x = this.origin.x + this.length * Math.sin(this.angle);
+                this.bob.y = this.origin.y + this.length * Math.cos(this.angle);
+            }
+        
+            applyPhysics(prevBob) {
+                let force = -gravity * sin(this.angle);
+                this.angleAcc = force / this.length;
+                this.angleVel += this.angleAcc;
+                this.angleVel *= friction;
+                this.angle += this.angleVel;
+                this.origin = prevBob;
+                this.updateBob();
+            }
+        }
+
+        pendulums = [
+            new Pendulum(canvasWidth / 2, canvasHeight / 2, 55, Math.PI / 4, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 240, Math.PI / 3, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 25, Math.PI / 5, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 250, Math.PI / 6, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 55, Math.PI / 4, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 60, Math.PI / 3.5, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 65, Math.PI / 2.8, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 70, Math.PI / 2.5, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 75, Math.PI / 2.2, Math.random() * 0.01 + 0.005),
+            new Pendulum(0, 0, 100, Math.PI / 2, Math.random() * 0.01 + 0.005)
+        ];
+        pendulumsCount = pendulums.length;
+
+        function nextState(pendulums, gravity, friction) {
+            let newPendulums = [];
+            
+            let prevBob = pendulums.length > 0 ? { x: pendulums[0].origin.x, y: pendulums[0].origin.y } : { x: 0, y: 0 };
+            for (let i = 0; i < pendulums.length; i++) {
+                const p = pendulums[i];
+                
+                let newPendulum = new Pendulum(
+                    p.origin.x, 
+                    p.origin.y, 
+                    p.length, 
+                    p.angle, 
+                    p.angleVel
+                );
+                newPendulum.angleAcc = p.angleAcc;
+                
+                let force = -gravity * Math.sin(newPendulum.angle);
+                newPendulum.angleAcc = force / newPendulum.length;
+                newPendulum.angleVel += newPendulum.angleAcc;
+                newPendulum.angleVel *= friction;
+                newPendulum.angle += newPendulum.angleVel;
+                
+                if (i > 0) {
+                    newPendulum.origin = { x: prevBob.x, y: prevBob.y };
+                }
+                
+                newPendulum.updateBob();
+                
+                newPendulums.push(newPendulum);
+                
+                prevBob = { x: newPendulum.bob.x, y: newPendulum.bob.y };
+            }
+            
+            return [newPendulums, gravity, friction];
+        }
+
+        let t = 1;
+
+        function createControls() {
+            const controls = document.querySelector('.controls');
+            controls.innerHTML = `
+                <div class="control-group">
+                    <label>深色模式</label>
+                    <input type="checkbox" id="darkMode" checked>
+                </div>
+                <div class="control-group">
+                    <label>全屏</label>
+                    <input type="checkbox" id="fullscreen" checked>
+                </div>
+                <div class="control-group">
+                    <label>背景透明</label>
+                    <input type="checkbox" id="transparentBg" checked>
+                </div>
+                <div class="control-group">
+                    <label>身体节数</label>
+                    <input type="range" id="numCircles" min="2" max="256" value="${numCircles}">
+                    <span>${numCircles}</span>
+                </div>
+                <div class="control-group">
+                    <label>腿长度</label>
+                    <input type="range" id="legLength" min="5" max="30" value="${legLength}">
+                    <span>${legLength}</span>
+                </div>
+                <div class="control-group">
+                    <label>头触角长度</label>
+                    <input type="range" id="antennaLength" min="10" max="50" value="${antennaLength}">
+                    <span>${antennaLength}</span>
+                </div>
+                <div class="control-group">
+                    <label>头基部长度</label>
+                    <input type="range" id="antennaBaseLength" min="5" max="30" value="${antennaBaseLength}">
+                    <span>${antennaBaseLength}</span>
+                </div>
+                <div class="control-group">
+                    <label>头弯曲角度 (°)</label>
+                    <input type="range" id="antennaBendAngle" min="0" max="90" value="${antennaBendAngle * 180 / Math.PI}">
+                    <span>${Math.round(antennaBendAngle * 180 / Math.PI)}</span>
+                </div>
+                <div class="control-group">
+                    <label>尾触角长度</label>
+                    <input type="range" id="tailAntennaLength" min="10" max="50" value="${tailAntennaLength}">
+                    <span>${tailAntennaLength}</span>
+                </div>
+                <div class="control-group">
+                    <label>尾基部长度</label>
+                    <input type="range" id="tailAntennaBaseLength" min="5" max="30" value="${tailAntennaBaseLength}">
+                    <span>${tailAntennaBaseLength}</span>
+                </div>
+                <div class="control-group">
+                    <label>尾弯曲角度 (°)</label>
+                    <input type="range" id="tailAntennaBendAngle" min="0" max="90" value="${tailAntennaBendAngle * 180 / Math.PI}">
+                    <span>${Math.round(tailAntennaBendAngle * 180 / Math.PI)}</span>
+                </div>
+                <div class="control-group">
+                    <label class="pos"></label>
+                </div>
+            `;
+
+            document.getElementById('darkMode').addEventListener('change', (e) => {
+                isDarkMode = e.target.checked;
+                document.body.classList.toggle('dark-mode', isDarkMode);
+                backgroundColor = isDarkMode ? 40 : 220;
+            });
+            document.getElementById('fullscreen').addEventListener('change', (e) => {
+                isFullScreen = e.target.checked;
+                if (isFullScreen) {
+                    resizeCanvas(windowWidth, windowHeight);
+                } else {
+                    resizeCanvas(windowWidth * 0.8, windowHeight * 0.8);
+                }
+                centerCanvas();
+            });
+            document.getElementById('transparentBg').addEventListener('change', (e) => {
+                isBackgroundTransparent = e.target.checked;
+            });
+            document.getElementById('numCircles').addEventListener('input', (e) => {
+                numCircles = parseInt(e.target.value);
+                e.target.nextElementSibling.textContent = numCircles;
+                reinitializeBody();
+            });
+            document.getElementById('legLength').addEventListener('input', (e) => {
+                legLength = parseFloat(e.target.value);
+                e.target.nextElementSibling.textContent = legLength;
+                reinitializeLegs();
+            });
+            document.getElementById('antennaLength').addEventListener('input', (e) => {
+                antennaLength = parseFloat(e.target.value);
+                e.target.nextElementSibling.textContent = antennaLength;
+                reinitializeHeadAntennae();
+            });
+            document.getElementById('antennaBaseLength').addEventListener('input', (e) => {
+                antennaBaseLength = parseFloat(e.target.value);
+                e.target.nextElementSibling.textContent = antennaBaseLength;
+                reinitializeHeadAntennae();
+            });
+            document.getElementById('antennaBendAngle').addEventListener('input', (e) => {
+                antennaBendAngle = parseFloat(e.target.value) * Math.PI / 180;
+                e.target.nextElementSibling.textContent = Math.round(e.target.value);
+            });
+            document.getElementById('tailAntennaLength').addEventListener('input', (e) => {
+                tailAntennaLength = parseFloat(e.target.value);
+                e.target.nextElementSibling.textContent = tailAntennaLength;
+                reinitializeTailAntennae();
+            });
+            document.getElementById('tailAntennaBaseLength').addEventListener('input', (e) => {
+                tailAntennaBaseLength = parseFloat(e.target.value);
+                e.target.nextElementSibling.textContent = tailAntennaBaseLength;
+                reinitializeTailAntennae();
+            });
+            document.getElementById('tailAntennaBendAngle').addEventListener('input', (e) => {
+                tailAntennaBendAngle = parseFloat(e.target.value) * Math.PI / 180;
+                e.target.nextElementSibling.textContent = Math.round(e.target.value);
+            });
+        }
+
+        function centerCanvas() {
+            let x = (windowWidth - width) / 2;
+            let y = (windowHeight - height) / 2;
+            canvas.position(x, y);
+        }
+
+        function constrainDistance(pointX, pointY, anchorX, anchorY, distance) {
+            let dx = pointX - anchorX;
+            let dy = pointY - anchorY;
+            let currentDistance = sqrt(dx * dx + dy * dy);
+            if (currentDistance === 0) return [anchorX + distance, anchorY];
+            let scale = distance / currentDistance;
+            return [anchorX + dx * scale, anchorY + dy * scale];
+        }
+        
+        function distance(x1, y1, x2, y2) {
+            return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        }
+        
+        function applyFABRIK(points, targetX, targetY, lengths) {
+            const iterations = 10;
+            const tolerance = 0.5;
+            const startX = points[0].x;
+            const startY = points[0].y;
+            
+            for (let iter = 0; iter < iterations; iter++) {
+                points[points.length - 1].x = targetX;
+                points[points.length - 1].y = targetY;
+                for (let i = points.length - 2; i >= 0; i--) {
+                    let [newX, newY] = constrainDistance(
+                        points[i].x, points[i].y,
+                        points[i + 1].x, points[i + 1].y,
+                        lengths[i]
+                    );
+                    points[i].x = newX;
+                    points[i].y = newY;
+                }
+                points[0].x = startX;
+                points[0].y = startY;
+                for (let i = 0; i < points.length - 1; i++) {
+                    let [newX, newY] = constrainDistance(
+                        points[i + 1].x, points[i + 1].y,
+                        points[i].x, points[i].y,
+                        lengths[i]
+                    );
+                    points[i + 1].x = newX;
+                    points[i + 1].y = newY;
+                }
+                const endDistance = distance(points[points.length - 1].x, points[points.length - 1].y, targetX, targetY);
+                if (endDistance < tolerance) break;
+            }
+            return points;
+        }
+
+        function reinitializeBody() {
+            circles = Array(numCircles).fill().map(() => ({x: canvasWidth/2, y: canvasHeight/2}));
+            reinitializeLegs();
+            reinitializeHeadAntennae();
+            reinitializeTailAntennae();
+        }
+        
+        function initializeLegs() {
+            leftLegs = [];
+            rightLegs = [];
+            leftLegTargets = [];
+            rightLegTargets = [];
+            leftLegMoving = [];
+            rightLegMoving = [];
+            lastPositions = [];
+            for (let i = 1; i < numCircles - 1; i++) {
+                let segmentAngle = i < numCircles - 2 ? 
+                    atan2(circles[i+1].y - circles[i].y, circles[i+1].x - circles[i].x) :
+                    atan2(circles[i].y - circles[i-1].y, circles[i].x - circles[i-1].x);
+                
+                let leftLeg = [];
+                let rightLeg = [];
+                let leftLengths = [];
+                let rightLengths = [];
+                
+                let leftBaseX = circles[i].x + cos(segmentAngle + PI/2) * rectWidth/2;
+                let leftBaseY = circles[i].y + sin(segmentAngle + PI/2) * rectWidth/2;
+                let rightBaseX = circles[i].x + cos(segmentAngle - PI/2) * rectWidth/2;
+                let rightBaseY = circles[i].y + sin(segmentAngle - PI/2) * rectWidth/2;
+
+                for (let j = 0; j <= legSegments; j++) {
+                    let leftAngle = PI/2 + (j * PI/8);
+                    leftLeg.push({
+                        x: leftBaseX + cos(leftAngle) * (j + 1) * legLength / 2,
+                        y: leftBaseY + sin(leftAngle) * (j + 1) * legLength / 2
+                    });
+                    
+                    let rightAngle = -PI/2 - (j * PI/8);
+                    rightLeg.push({
+                        x: rightBaseX + cos(rightAngle) * (j + 1) * legLength / 2,
+                        y: rightBaseY + sin(rightAngle) * (j + 1) * legLength / 2
+                    });
+                    
+                    if (j < legSegments) {
+                        leftLengths.push(legLength);
+                        rightLengths.push(legLength);
+                    }
+                }
+                
+                leftLegs.push({points: leftLeg, lengths: leftLengths});
+                rightLegs.push({points: rightLeg, lengths: rightLengths});
+                
+                leftLegTargets.push({x: leftLeg[legSegments].x, y: leftLeg[legSegments].y});
+                rightLegTargets.push({x: rightLeg[legSegments].x, y: rightLeg[legSegments].y});
+                
+                leftLegMoving.push(false);
+                rightLegMoving.push(false);
+                lastPositions.push({x: circles[i].x, y: circles[i].y});
+            }
+        }
+
+        function reinitializeLegs() {
+            initializeLegs();
+        }
+        
+        function initializeHeadAntennae() {
+            leftAntenna = { points: [], velocities: [], lengths: [] };
+            rightAntenna = { points: [], velocities: [], lengths: [] };
+            let headAngle = atan2(circles[1].y - circles[0].y, circles[1].x - circles[0].x);
+            
+            let leftBaseAngle = headAngle - PI/4;
+            let leftBentAngle = leftBaseAngle - antennaBendAngle;
+            let leftBaseX = circles[0].x - cos(headAngle) * rectHeight/2 + cos(headAngle + PI/2) * antennaBaseOffset;
+            let leftBaseY = circles[0].y - sin(headAngle) * rectHeight/2 + sin(headAngle + PI/2) * antennaBaseOffset;
+            
+            let rightBaseAngle = headAngle + PI/4;
+            let rightBentAngle = rightBaseAngle + antennaBendAngle;
+            let rightBaseX = circles[0].x - cos(headAngle) * rectHeight/2 + cos(headAngle - PI/2) * antennaBaseOffset;
+            let rightBaseY = circles[0].y - sin(headAngle) * rectHeight/2 + sin(headAngle - PI/2) * antennaBaseOffset;
+
+            leftAntenna.points.push({x: leftBaseX, y: leftBaseY});
+            leftAntenna.points.push({
+                x: leftBaseX - cos(leftBentAngle) * antennaBaseLength,
+                y: leftBaseY - sin(leftBentAngle) * antennaBaseLength
+            });
+            rightAntenna.points.push({x: rightBaseX, y: rightBaseY});
+            rightAntenna.points.push({
+                x: rightBaseX - cos(rightBentAngle) * antennaBaseLength,
+                y: rightBaseY - sin(rightBentAngle) * antennaBaseLength
+            });
+
+            for (let i = 2; i < antennaSegments; i++) {
+                leftAntenna.points.push({
+                    x: leftAntenna.points[1].x - cos(leftBaseAngle) * (i-1) * antennaLength,
+                    y: leftAntenna.points[1].y - sin(leftBaseAngle) * (i-1) * antennaLength
+                });
+                rightAntenna.points.push({
+                    x: rightAntenna.points[1].x - cos(rightBaseAngle) * (i-1) * antennaLength,
+                    y: rightAntenna.points[1].y - sin(rightBaseAngle) * (i-1) * antennaLength
+                });
+            }
+
+            for (let i = 0; i < antennaSegments; i++) {
+                leftAntenna.velocities.push({x: 0, y: 0});
+                rightAntenna.velocities.push({x: 0, y: 0});
+                if (i < antennaSegments - 1) {
+                    leftAntenna.lengths.push(i === 0 ? antennaBaseLength : antennaLength);
+                    rightAntenna.lengths.push(i === 0 ? antennaBaseLength : antennaLength);
+                }
+            }
+        }
+
+        function reinitializeHeadAntennae() {
+            initializeHeadAntennae();
+        }
+
+        function initializeTailAntennae() {
+            leftTailAntenna = { points: [], velocities: [], lengths: [] };
+            rightTailAntenna = { points: [], velocities: [], lengths: [] };
+            let tailAngle = atan2(circles[numCircles-1].y - circles[numCircles-2].y, circles[numCircles-1].x - circles[numCircles-2].x);
+            
+            let leftTailBaseAngle = tailAngle - PI/4;
+            let leftTailBentAngle = leftTailBaseAngle + tailAntennaBendAngle;
+            let leftTailBaseX = circles[numCircles-1].x + cos(tailAngle) * rectHeight/2 + cos(tailAngle + PI/2) * antennaBaseOffset;
+            let leftTailBaseY = circles[numCircles-1].y + sin(tailAngle) * rectHeight/2 + sin(tailAngle + PI/2) * antennaBaseOffset;
+            
+            let rightTailBaseAngle = tailAngle + PI/4;
+            let rightTailBentAngle = rightTailBaseAngle - tailAntennaBendAngle;
+            let rightTailBaseX = circles[numCircles-1].x + cos(tailAngle) * rectHeight/2 + cos(tailAngle - PI/2) * antennaBaseOffset;
+            let rightTailBaseY = circles[numCircles-1].y + sin(tailAngle) * rectHeight/2 + sin(tailAngle - PI/2) * antennaBaseOffset;
+
+            leftTailAntenna.points.push({x: leftTailBaseX, y: leftTailBaseY});
+            leftTailAntenna.points.push({
+                x: leftTailBaseX + cos(leftTailBentAngle) * tailAntennaBaseLength,
+                y: leftTailBaseY + sin(leftTailBentAngle) * tailAntennaBaseLength
+            });
+            rightTailAntenna.points.push({x: rightTailBaseX, y: rightTailBaseY});
+            rightTailAntenna.points.push({
+                x: rightTailBaseX + cos(rightTailBentAngle) * tailAntennaBaseLength,
+                y: rightTailBaseY + sin(rightTailBentAngle) * tailAntennaBaseLength
+            });
+
+            for (let i = 2; i < antennaSegments; i++) {
+                leftTailAntenna.points.push({
+                    x: leftTailAntenna.points[1].x + cos(leftTailBaseAngle) * (i-1) * tailAntennaLength,
+                    y: leftTailAntenna.points[1].y + sin(leftTailBaseAngle) * (i-1) * tailAntennaLength
+                });
+                rightTailAntenna.points.push({
+                    x: rightTailAntenna.points[1].x + cos(rightTailBaseAngle) * (i-1) * tailAntennaLength,
+                    y: rightTailAntenna.points[1].y + sin(rightTailBaseAngle) * (i-1) * tailAntennaLength
+                });
+            }
+
+            for (let i = 0; i < antennaSegments; i++) {
+                leftTailAntenna.velocities.push({x: 0, y: 0});
+                rightTailAntenna.velocities.push({x: 0, y: 0});
+                if (i < antennaSegments - 1) {
+                    leftTailAntenna.lengths.push(i === 0 ? tailAntennaBaseLength : tailAntennaLength);
+                    rightTailAntenna.lengths.push(i === 0 ? tailAntennaBaseLength : tailAntennaLength);
+                }
+            }
+        }
+
+        function reinitializeTailAntennae() {
+            initializeTailAntennae();
+        }
+
+        function updateHeadAntennae() {
+            let headAngle = atan2(circles[1].y - circles[0].y, circles[1].x - circles[0].x);
+            
+            let leftBaseAngle = headAngle - PI/4;
+            let rightBaseAngle = headAngle + PI/4;
+            let leftBentAngle = leftBaseAngle - antennaBendAngle;
+            let rightBentAngle = rightBaseAngle + antennaBendAngle;
+            let leftBaseX = circles[0].x - cos(headAngle) * rectHeight/2 + cos(headAngle + PI/2) * antennaBaseOffset;
+            let leftBaseY = circles[0].y - sin(headAngle) * rectHeight/2 + sin(headAngle + PI/2) * antennaBaseOffset;
+            let rightBaseX = circles[0].x - cos(headAngle) * rectHeight/2 + cos(headAngle - PI/2) * antennaBaseOffset;
+            let rightBaseY = circles[0].y - sin(headAngle) * rectHeight/2 + sin(headAngle - PI/2) * antennaBaseOffset;
+
+            leftAntenna.points[0].x = leftBaseX;
+            leftAntenna.points[0].y = leftBaseY;
+            rightAntenna.points[0].x = rightBaseX;
+            rightAntenna.points[0].y = rightBaseY;
+
+            for (let i = 1; i < antennaSegments; i++) {
+                let targetAngleLeft = (i === 1) ? leftBentAngle : leftBaseAngle;
+                let targetAngleRight = (i === 1) ? rightBentAngle : rightBaseAngle;
+
+                let targetXLeft = leftAntenna.points[i-1].x - cos(targetAngleLeft) * leftAntenna.lengths[i-1];
+                let targetYLeft = leftAntenna.points[i-1].y - sin(targetAngleLeft) * leftAntenna.lengths[i-1];
+                let targetXRight = rightAntenna.points[i-1].x - cos(targetAngleRight) * rightAntenna.lengths[i-1];
+                let targetYRight = rightAntenna.points[i-1].y - sin(targetAngleRight) * rightAntenna.lengths[i-1];
+
+                const factor = 0.05 + (antennaSegments - i) * 0.01;
+
+                let axLeft = (targetXLeft - leftAntenna.points[i].x) * factor;
+                let ayLeft = (targetYLeft - leftAntenna.points[i].y) * factor;
+                let axRight = (targetXRight - rightAntenna.points[i].x) * factor;
+                let ayRight = (targetYRight - rightAntenna.points[i].y) * factor;
+
+                leftAntenna.velocities[i].x = (leftAntenna.velocities[i].x - axLeft) * antennaDampings[i-1];
+                leftAntenna.velocities[i].y = (leftAntenna.velocities[i].y - ayLeft) * antennaDampings[i-1];
+                rightAntenna.velocities[i].x = (rightAntenna.velocities[i].x - axRight) * antennaDampings[i-1];
+                rightAntenna.velocities[i].y = (rightAntenna.velocities[i].y - ayRight) * antennaDampings[i-1];
+
+                leftAntenna.points[i].x -= leftAntenna.velocities[i].x;
+                leftAntenna.points[i].y -= leftAntenna.velocities[i].y;
+                rightAntenna.points[i].x -= rightAntenna.velocities[i].x;
+                rightAntenna.points[i].y -= rightAntenna.velocities[i].y;
+
+                let [newXLeft, newYLeft] = constrainDistance(
+                    leftAntenna.points[i].x, leftAntenna.points[i].y,
+                    leftAntenna.points[i-1].x, leftAntenna.points[i-1].y,
+                    leftAntenna.lengths[i-1]
+                );
+                let [newXRight, newYRight] = constrainDistance(
+                    rightAntenna.points[i].x, rightAntenna.points[i].y,
+                    rightAntenna.points[i-1].x, rightAntenna.points[i-1].y,
+                    rightAntenna.lengths[i-1]
+                );
+
+                leftAntenna.points[i].x = newXLeft;
+                leftAntenna.points[i].y = newYLeft;
+                rightAntenna.points[i].x = newXRight;
+                rightAntenna.points[i].y = newYRight;
+            }
+        }
+
+        function updateTailAntennae() {
+            let tailAngle = atan2(circles[numCircles-1].y - circles[numCircles-2].y, circles[numCircles-1].x - circles[numCircles-2].x);
+            
+            let leftTailBaseAngle = tailAngle - PI/4;
+            let rightTailBaseAngle = tailAngle + PI/4;
+            let leftTailBentAngle = leftTailBaseAngle + tailAntennaBendAngle;
+            let rightTailBentAngle = rightTailBaseAngle - tailAntennaBendAngle;
+            let leftTailBaseX = circles[numCircles-1].x + cos(tailAngle) * (rectHeight - 9)/2 + cos(tailAngle - PI/2) * antennaBaseOffset;
+            let leftTailBaseY = circles[numCircles-1].y + sin(tailAngle) * (rectHeight - 9)/2 + sin(tailAngle - PI/2) * antennaBaseOffset;
+            let rightTailBaseX = circles[numCircles-1].x + cos(tailAngle) * (rectHeight - 9)/2 + cos(tailAngle + PI/2) * antennaBaseOffset;
+            let rightTailBaseY = circles[numCircles-1].y + sin(tailAngle) * (rectHeight - 9)/2 + sin(tailAngle + PI/2) * antennaBaseOffset;
+
+            leftTailAntenna.points[0].x = leftTailBaseX;
+            leftTailAntenna.points[0].y = leftTailBaseY;
+            rightTailAntenna.points[0].x = rightTailBaseX;
+            rightTailAntenna.points[0].y = rightTailBaseY;
+
+            for (let i = 1; i < antennaSegments; i++) {
+                let targetAngleLeft = (i === 1) ? leftTailBentAngle : leftTailBaseAngle;
+                let targetAngleRight = (i === 1) ? rightTailBentAngle : rightTailBaseAngle;
+
+                let targetXLeft = leftTailAntenna.points[i-1].x + cos(targetAngleLeft) * leftTailAntenna.lengths[i-1];
+                let targetYLeft = leftTailAntenna.points[i-1].y + sin(targetAngleLeft) * leftTailAntenna.lengths[i-1];
+                let targetXRight = rightTailAntenna.points[i-1].x + cos(targetAngleRight) * rightTailAntenna.lengths[i-1];
+                let targetYRight = rightTailAntenna.points[i-1].y + sin(targetAngleRight) * rightTailAntenna.lengths[i-1];
+
+                const factor = 0.05 + (antennaSegments - i) * 0.03;
+
+                let axLeft = (targetXLeft - leftTailAntenna.points[i].x) * factor;
+                let ayLeft = (targetYLeft - leftTailAntenna.points[i].y) * factor;
+                let axRight = (targetXRight - rightTailAntenna.points[i].x) * factor;
+                let ayRight = (targetYRight - rightTailAntenna.points[i].y) * factor;
+
+                leftTailAntenna.velocities[i].x = (leftTailAntenna.velocities[i].x - axLeft) * tailAntennaDampings[i-1];
+                leftTailAntenna.velocities[i].y = (leftTailAntenna.velocities[i].y - ayLeft) * tailAntennaDampings[i-1];
+                rightTailAntenna.velocities[i].x = (rightTailAntenna.velocities[i].x - axRight) * tailAntennaDampings[i-1];
+                rightTailAntenna.velocities[i].y = (rightTailAntenna.velocities[i].y - ayRight) * tailAntennaDampings[i-1];
+
+                leftTailAntenna.points[i].x -= leftTailAntenna.velocities[i].x;
+                leftTailAntenna.points[i].y -= leftTailAntenna.velocities[i].y;
+                rightTailAntenna.points[i].x -= rightTailAntenna.velocities[i].x;
+                rightTailAntenna.points[i].y -= rightTailAntenna.velocities[i].y;
+
+                let [newXLeft, newYLeft] = constrainDistance(
+                    leftTailAntenna.points[i].x, leftTailAntenna.points[i].y,
+                    leftTailAntenna.points[i-1].x, leftTailAntenna.points[i-1].y,
+                    leftTailAntenna.lengths[i-1]
+                );
+                let [newXRight, newYRight] = constrainDistance(
+                    rightTailAntenna.points[i].x, rightTailAntenna.points[i].y,
+                    rightTailAntenna.points[i-1].x, rightTailAntenna.points[i-1].y,
+                    rightTailAntenna.lengths[i-1]
+                );
+
+                leftTailAntenna.points[i].x = newXLeft;
+                leftTailAntenna.points[i].y = newYLeft;
+                rightTailAntenna.points[i].x = newXRight;
+                rightTailAntenna.points[i].y = newYRight;
+            }
+        }
+        
+        function updateLegs() {
+            for (let i = 1; i < numCircles - 1; i++) {
+                const idx = i - 1;
+                const bodyPoint = circles[i];
+                
+                let segmentAngle = i < numCircles - 2 ?
+                    atan2(circles[i+1].y - circles[i].y, circles[i+1].x - circles[i].x) :
+                    atan2(circles[i].y - circles[i-1].y, circles[i].x - circles[i-1].x);
+                
+                leftLegs[idx].points[0].x = bodyPoint.x + cos(segmentAngle + PI/2) * rectHeight/2;
+                leftLegs[idx].points[0].y = bodyPoint.y + sin(segmentAngle + PI/2) * rectHeight/2;
+                rightLegs[idx].points[0].x = bodyPoint.x + cos(segmentAngle - PI/2) * rectHeight/2;
+                rightLegs[idx].points[0].y = bodyPoint.y + sin(segmentAngle - PI/2) * rectHeight/2;
+                
+                const moveDistance = distance(bodyPoint.x, bodyPoint.y, lastPositions[idx].x, lastPositions[idx].y);
+                const moveAngle = atan2(bodyPoint.y - lastPositions[idx].y, bodyPoint.x - lastPositions[idx].x);
+                
+                if (!leftLegMoving[idx]) {
+                    const distToTarget = distance(leftLegs[idx].points[legSegments].x, leftLegs[idx].points[legSegments].y, leftLegTargets[idx].x, leftLegTargets[idx].y);
+                    if (distToTarget > legLength * 1.5) {
+                        leftLegMoving[idx] = true;
+                        const stepAngle = moveAngle - PI/2;
+                        leftLegTargets[idx].x = leftLegs[idx].points[0].x + cos(stepAngle) * legLength * 2;
+                        leftLegTargets[idx].y = leftLegs[idx].points[0].y + sin(stepAngle) * legLength * 2;
+                    }
+                } else {
+                    const distToTarget = distance(leftLegs[idx].points[legSegments].x, leftLegs[idx].points[legSegments].y, leftLegTargets[idx].x, leftLegTargets[idx].y);
+                    if (distToTarget < 5) leftLegMoving[idx] = false;
+                }
+                
+                if (!rightLegMoving[idx]) {
+                    const distToTarget = distance(rightLegs[idx].points[legSegments].x, rightLegs[idx].points[legSegments].y, rightLegTargets[idx].x, rightLegTargets[idx].y);
+                    if (distToTarget > legLength * 1.5) {
+                        rightLegMoving[idx] = true;
+                        const stepAngle = moveAngle + PI/2;
+                        rightLegTargets[idx].x = rightLegs[idx].points[0].x + cos(stepAngle) * legLength * 2;
+                        rightLegTargets[idx].y = rightLegs[idx].points[0].y + sin(stepAngle) * legLength * 2;
+                    }
+                } else {
+                    const distToTarget = distance(rightLegs[idx].points[legSegments].x, rightLegs[idx].points[legSegments].y, rightLegTargets[idx].x, rightLegTargets[idx].y);
+                    if (distToTarget < 5) rightLegMoving[idx] = false;
+                }
+                
+                if (leftLegMoving[idx]) {
+                    applyFABRIK(leftLegs[idx].points, leftLegTargets[idx].x, leftLegTargets[idx].y, leftLegs[idx].lengths);
+                } else {
+                    applyFABRIK(leftLegs[idx].points, leftLegTargets[idx].x, leftLegTargets[idx].y, leftLegs[idx].lengths);
+                }
+                
+                if (rightLegMoving[idx]) {
+                    applyFABRIK(rightLegs[idx].points, rightLegTargets[idx].x, rightLegTargets[idx].y, rightLegs[idx].lengths);
+                } else {
+                    applyFABRIK(rightLegs[idx].points, rightLegTargets[idx].x, rightLegTargets[idx].y, rightLegs[idx].lengths);
+                }
+                
+                lastPositions[idx].x = bodyPoint.x;
+                lastPositions[idx].y = bodyPoint.y;
+            }
+        }
+        
+        function drawRoundedRect(x, y, w, h, r, angle) {
+            push();
+            translate(x, y);
+            rotate(angle);
+            const left = -w/2;
+            const top = -h/2;
+            rect(left, top, w, h, r);
+            pop();
+        }
+
+        function updateRandomMovement() {
+            t += 1;
+            [pendulums, gravity, friction] = nextState(pendulums, gravity, friction);
+            position = pendulums[pendulumsCount - 1].origin;
+
+            const scale = 1;
+            const offsetX = 0;
+            const offsetY = 0;
+
+            circles[0].x = offsetX + position.x * scale;
+            circles[0].y = offsetY + position.y * scale;
+
+            document.querySelector("label.pos").innerHTML = `t=${t}, (${circles[0].x.toFixed(2)}, ${circles[0].y.toFixed(2)})`;
+        }
+
+        let canvas;
+        function setup() {
+            canvas = createCanvas(canvasWidth, canvasHeight);
+            background(backgroundColor);
+            initializeLegs();
+            initializeHeadAntennae();
+            initializeTailAntennae();
+            rectMode(CORNER);
+            createControls();
+            centerCanvas();
+            t = 0;
+            position = { x1: 0, y1: 0, x2: 0, y2: 0 };
+        }
+
+        function mousePressed() {
+            if (mouseY < height - 50) {
+                isRandomMovement = !isRandomMovement;
+            }
+        }
+
+        function draw() {
+            if (!isBackgroundTransparent) {
+                background(backgroundColor);
+            } else {
+                clear();
+            }
+            
+            if (isRandomMovement) {
+                updateRandomMovement();
+            } else {
+                circles[0].x = mouseX;
+                circles[0].y = mouseY;
+            }
+
+            for(let i = 1; i < numCircles; i++) {
+                let constrainedPos = constrainDistance(
+                    circles[i].x, circles[i].y,
+                    circles[i-1].x, circles[i-1].y,
+                    segmentLength
+                );
+                circles[i].x = constrainedPos[0];
+                circles[i].y = constrainedPos[1];
+            }
+            
+            updateLegs();
+            updateHeadAntennae();
+            updateTailAntennae();
+
+            stroke(isDarkMode ? 255 : 0);
+            strokeWeight(1);
+            for (let i = 0; i < leftLegs.length; i++) {
+                for (let j = 0; j < leftLegs[i].points.length - 1; j++) {
+                    line(
+                        leftLegs[i].points[j].x, leftLegs[i].points[j].y,
+                        leftLegs[i].points[j+1].x, leftLegs[i].points[j+1].y
+                    );
+                }
+            }
+            for (let i = 0; i < rightLegs.length; i++) {
+                for (let j = 0; j < rightLegs[i].points.length - 1; j++) {
+                    line(
+                        rightLegs[i].points[j].x, rightLegs[i].points[j].y,
+                        rightLegs[i].points[j+1].x, rightLegs[i].points[j+1].y
+                    );
+                }
+            }
+
+            stroke(isDarkMode ? 255 : 0);
+            strokeWeight(1);
+            for (let i = 0; i < antennaSegments - 1; i++) {
+                line(
+                    leftAntenna.points[i].x, leftAntenna.points[i].y,
+                    leftAntenna.points[i+1].x, leftAntenna.points[i+1].y
+                );
+                line(
+                    rightAntenna.points[i].x, rightAntenna.points[i].y,
+                    rightAntenna.points[i+1].x, rightAntenna.points[i+1].y
+                );
+            }
+
+            for (let i = 0; i < antennaSegments - 1; i++) {
+                line(
+                    leftTailAntenna.points[i].x, leftTailAntenna.points[i].y,
+                    leftTailAntenna.points[i+1].x, leftTailAntenna.points[i+1].y
+                );
+                line(
+                    rightTailAntenna.points[i].x, rightTailAntenna.points[i].y,
+                    rightTailAntenna.points[i+1].x, rightTailAntenna.points[i+1].y
+                );
+            }
+            
+            fill(isDarkMode ? [255, 128] : [0, 128]);
+            strokeWeight(1);
+            for (let i = 1; i < antennaSegments - 1; i++) {
+                circle(leftAntenna.points[i].x, leftAntenna.points[i].y, antennaPointSize);
+                circle(rightAntenna.points[i].x, rightAntenna.points[i].y, antennaPointSize);
+            }
+
+            for (let i = 1; i < antennaSegments - 1; i++) {
+                circle(leftTailAntenna.points[i].x, leftTailAntenna.points[i].y, antennaPointSize);
+                circle(rightTailAntenna.points[i].x, rightTailAntenna.points[i].y, antennaPointSize);
+            }
+
+            let angle = atan2(circles[1].y - circles[0].y, circles[1].x - circles[0].x);
+            fill(isDarkMode ? [100, 0] : [255, 0]);
+            stroke(isDarkMode ? 255 : 0);
+            strokeWeight(1);
+            drawRoundedRect(circles[0].x, circles[0].y, rectWidth + 12, rectHeight, rectCorner + 8, angle);
+            
+            fill(isDarkMode ? [80, 0] : [0, 0]);
+            stroke(isDarkMode ? 255 : 0);
+            for(let i = 1; i < numCircles; i++) {
+                let segmentAngle = i < numCircles - 1 ?
+                    atan2(circles[i+1].y - circles[i].y, circles[i+1].x - circles[i].x) :
+                    atan2(circles[i].y - circles[i-1].y, circles[i].x - circles[i-1].x);
+                
+                if (i < numCircles - 1) {
+                    drawRoundedRect(circles[i].x, circles[i].y, rectWidth, rectHeight, rectCorner, segmentAngle);
+                } else {
+                    drawRoundedRect(circles[i].x, circles[i].y, rectWidth - 1, rectHeight - 4.5, rectCorner + 4, segmentAngle);
+                }
+            }
+            
+            fill(isDarkMode ? 255 : 0);
+            noStroke();
+            for (let i = 0; i < leftLegs.length; i++) {
+                for (let j = 1; j < leftLegs[i].points.length - 1; j++) {
+                    circle(leftLegs[i].points[j].x, leftLegs[i].points[j].y, legPointSize);
+                }
+            }
+            for (let i = 0; i < rightLegs.length; i++) {
+                for (let j = 1; j < rightLegs[i].points.length - 1; j++) {
+                    circle(rightLegs[i].points[j].x, rightLegs[i].points[j].y, legPointSize);
+                }
+            }
+        }
+
+        function windowResized() {
+            if (isFullScreen) {
+                resizeCanvas(windowWidth, windowHeight);
+            } else {
+                resizeCanvas(windowWidth * 0.8, windowHeight * 0.8);
+            }
+            centerCanvas();
+            reinitializeBody();
+        }
+    </script>
+</body>
+</html>
