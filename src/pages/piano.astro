@@ -1,0 +1,315 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Virtual Piano">
+    <div class="header">
+        <a href="/" class="back-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </a>
+        <h1>Virtual Piano</h1>
+    </div>
+
+    <div class="piano-container">
+        {
+            [2, 3, 4, 5, 6, 7, 8].map(octave => {
+                // Base frequencies for C in each octave (approximate)
+                const baseFreqs = {
+                    2: 65.41, 3: 130.81, 4: 261.63, 5: 523.25, 6: 1046.50, 7: 2093.00, 8: 4186.01
+                };
+                const startFreq = baseFreqs[octave];
+                
+                // Generate 12 semitones
+                const keys = [];
+                const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                for (let i = 0; i < 12; i++) {
+                    const freq = startFreq * Math.pow(2, i / 12);
+                    keys.push({ note: notes[i], freq: freq.toFixed(2), isBlack: notes[i].includes('#') });
+                }
+
+                return (
+                    <div class="octave-row">
+                        <div class="white-keys">
+                            {keys.filter(k => !k.isBlack).map(k => (
+                                <button class="piano-key white" data-freq={k.freq}>{k.note}</button>
+                            ))}
+                        </div>
+                        <div class="black-keys">
+                            {keys.filter(k => k.isBlack).map(k => (
+                                <button class="piano-key black" data-freq={k.freq} data-note={k.note}>{k.note}</button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })
+        }
+    </div>
+
+    <h3>音调与振幅输入框</h3>
+
+    <h4>谐波频率比例</h4>
+    <div id="harmonics-inputs" class="input-container"></div>
+  
+    <h4>谐波振幅比例</h4>
+    <div id="amplitudes-inputs" class="input-container"></div>
+
+
+
+    <style>
+        body {
+            background-color: var(--body-bg-color);
+            color: var(--topbar-text-color);
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: center;
+            padding: 40px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        h1 {
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin: 0; /* Remove default margin */
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: var(--topbar-text-color);
+            background-color: var(--control-button-bg-color);
+            border: 1px solid var(--control-button-border-color);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            padding: 0;
+        }
+        
+        .back-link svg {
+            fill: none;
+            stroke: currentColor;
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+        
+        .piano-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .octave-row {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+        }
+
+        .white-keys {
+            display: flex;
+            height: 100%;
+        }
+
+        .piano-key {
+            user-select: none;
+            cursor: pointer;
+            border-radius: 0 0 4px 4px;
+            transition: all 0.1s ease;
+            position: relative;
+            border: 1px solid var(--control-button-border-color);
+        }
+
+        .piano-key.white {
+            flex: 1;
+            background: var(--piano-white-bg, #ffffff);
+            color: var(--piano-white-text, #000);
+            height: 100%;
+            z-index: 1;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .piano-key.white:active {
+            background: #eee;
+            transform: translateY(2px);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .piano-key.black {
+            position: absolute;
+            top: 0;
+            height: 60%;
+            width: 8%; /* Approx 60% of white key width (100/7 * 0.6) */
+            background: var(--piano-black-bg, #000000);
+            color: var(--piano-black-text, #fff);
+            z-index: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .piano-key.black:active {
+            background: #333;
+            transform: translateY(2px);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* Positioning black keys */
+        .piano-key.black[data-note="C#"] { left: 10%; } /* 14.28% - half width */
+        .piano-key.black[data-note="D#"] { left: 24.28%; } /* 28.57% - half width */
+        .piano-key.black[data-note="F#"] { left: 52.85%; } /* 57.14% - half width */
+        .piano-key.black[data-note="G#"] { left: 67.14%; } /* 71.43% - half width */
+        .piano-key.black[data-note="A#"] { left: 81.42%; } /* 85.71% - half width */
+        
+        h3, h4 {
+            margin-top: 40px;
+            font-weight: 500;
+            color: var(--topbar-text-color);
+        }
+        
+        .input-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px auto;
+            flex-wrap: wrap;
+            max-width: 800px;
+            padding: 20px;
+            background: var(--control-button-bg-color);
+            border-radius: 12px;
+            border: 1px solid var(--control-button-border-color);
+        }
+        
+        .input-container input[type="number"] {
+            font-size: 1rem;
+            color: var(--input-color);
+            background: var(--input-bg-color);
+            width: 100px;
+            padding: 10px 12px;
+            border: 1px solid var(--input-border-color);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .input-container input[type="number"]:hover {
+            border-color: var(--slider-thumb-bg-color);
+        }
+
+        .input-container input[type="number"]:focus {
+            outline: none;
+            border-color: var(--slider-thumb-bg-color);
+            box-shadow: 0 0 0 3px rgba(19, 137, 255, 0.2);
+        }
+
+        .input-container input[type="number"]::-webkit-inner-spin-button,
+        .input-container input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        a {
+            color: var(--slider-thumb-bg-color);
+            text-decoration: none;
+            margin-top: 40px;
+            display: inline-block;
+            font-weight: 500;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+
+    <script is:inline>
+        const audioContext = new AudioContext();
+
+        let harmonics = [0.5, 1, 1.5, 2, 2.5]; // piano
+        let amplitudes = [0.007, 0.01, 0.003, 0.006, 0.01];
+
+        function createInputBoxes(containerId, valuesArray, onChange) {
+            const container = document.getElementById(containerId);
+
+            for (let i = 0; i < valuesArray.length; i++) {
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = "0.01";
+                input.value = valuesArray[i];
+                input.addEventListener("input", (event) => {
+                    valuesArray[i] = parseFloat(event.target.value);
+                    onChange();
+                });
+                container.appendChild(input);
+            }
+        }
+
+        function updateArrays() {
+            console.log("谐波频率比例：", harmonics);
+            console.log("谐波振幅比例：", amplitudes);
+        }
+
+        createInputBoxes("harmonics-inputs", harmonics, updateArrays);
+        createInputBoxes("amplitudes-inputs", amplitudes, updateArrays);
+
+        function playPianoKey(baseFrequency) {
+            const fundamental = baseFrequency;
+            const duration = 1;
+            const fadeDuration = 0.67;
+
+            const oscillators = harmonics.map((harmonic, index) => {
+                const oscillator = audioContext.createOscillator();
+                oscillator.type = "sine";
+                oscillator.frequency.value = fundamental * harmonic;
+                oscillator.start();
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = amplitudes[index];
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                return { oscillator, gainNode };
+            });
+
+            setTimeout(() => {
+                const fadeStartTime = audioContext.currentTime;
+                const fadeEndTime = fadeStartTime + fadeDuration;
+                const fadeStartValue = 1;
+                const fadeEndValue = 0.01;
+
+                oscillators.forEach(({ gainNode }) => {
+                    gainNode.gain.setValueAtTime(fadeStartValue, fadeStartTime);
+                    gainNode.gain.exponentialRampToValueAtTime(fadeEndValue, fadeEndTime);
+                });
+            }, (duration - fadeDuration) * 1000);
+
+            setTimeout(() => {
+                oscillators.forEach(({ oscillator }) => oscillator.stop());
+            }, duration * 1000);
+        }
+
+        // Add event listeners to all piano keys
+        document.querySelectorAll('.piano-key').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                playPianoKey(parseFloat(button.dataset.freq));
+            });
+            button.addEventListener('mouseover', (e) => {
+                if (e.buttons === 1) {
+                    playPianoKey(parseFloat(button.dataset.freq));
+                }
+            });
+        });
+    </script>
+</Layout>

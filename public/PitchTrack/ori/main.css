@@ -1,0 +1,219 @@
+:root {
+    --theadColor: #222222;
+    --darkColor: #060606;
+    --lightColor: #F5F5F5;
+    --borderColor: #414141;
+    --buttonColor: #424242;
+    --buttonActiveColor: #ff5f17;
+    --buttonHoverColor: #525252;
+}
+
+.sidebar .entry-header,
+.sidebar .entry-content,
+.sidebar .entry-summary,
+.sidebar .entry-meta,
+#content .entry-content {
+    padding: 0px;
+    max-width: 1500px;
+    text-align: center;
+}
+
+/* 
+.site-main .widget-area,
+footer,
+.dataTables_length,
+.navigation,
+#comments,
+#wpadminbar,
+#masthead,
+.entry-header,
+#colophon,
+.entry-meta {
+    display: none;
+} */
+
+.site-main .widget-area,
+footer,
+.dataTables_length,
+#comments,
+#colophon,
+.entry-meta {
+    display: none;
+}
+
+#main_control .slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    padding: 0px;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+}
+
+
+
+.sidebar-inner {
+    display: none;
+}
+
+.entry-header,
+.entry-content,
+.entry-summary,
+.entry-meta {
+    padding: 0 60px 0 60px;
+}
+
+@media (max-width: 760px) {
+    .group_container {
+        width: 100%;
+    }
+
+
+    .d2r_button,
+    .d2r_button:active {
+        padding: 5px 10px;
+        margin: 2px 4px;
+        font-size: 70%;
+    }
+}
+
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+#main_control {
+    text-align: center;
+    position: fixed;
+    z-index: 999;
+    background: #333;
+    width: 100%;
+    bottom: 0px;
+    left: 0px;
+}
+
+#main_control a,
+#main_control button,
+#dialog button {
+    margin: 6px 6px;
+    padding: 4px 8px;
+    border: 1px solid #666;
+    border-radius: 4px;
+}
+
+
+body,
+#main {
+    /* background-color: #060606; */
+    color: #eee;
+}
+
+canvas {
+    background-color: #000;
+}
+
+#dialog {
+    min-width: 50%;
+    min-height: 50%;
+    background-color: #fff;
+    border-radius: 10px;
+    -moz-box-shadow: 3px 3px 5px #535353;
+    -webkit-box-shadow: 3px 3px 5px #535353;
+    box-shadow: 3px 3px 5px #535353;
+}
+
+dialog::backdrop {
+    background: rgba(100, 100, 100, 0.5);
+}
+
+table,
+td {
+    text-align: center;
+}
+
+.close_button {
+    min-width: 30%;
+    height: 3rem;
+    color: #FFF176;
+}
+
+input,
+input[type=file] {
+    color: #F5F5F5;
+    border-color: #333;
+    margin: 0.3rem;
+}
+
+
+
+.toggle-radio {
+    margin-left: 10px;
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+}
+
+.toggle-radio>input:checked+label {
+    background: lightblue;
+}
+
+.toggle-radio>input+label:not(:last-of-type) {
+    border-right: 1px solid #ccc;
+}
+
+/* Rounded corners */
+.toggle-radio {
+    border-radius: 4px;
+}
+
+/* //////////////////////////
+CORE STYLES BELOW - NO TOUCHY
+////////////////////////// */
+.toggle-radio {
+    display: inline-flex;
+    color: #000;
+}
+
+.toggle-radio>input[type='radio'] {
+    display: none;
+}
+
+.toggle-radio>input+label {
+    display: inline-block;
+    margin-bottom: 0;
+    padding: 4px 8px;
+    float: left;
+    cursor: pointer;
+}
+
+/* Transitions */
+.toggle-radio>input:checked+label {
+    transition: background 100ms linear;
+}
+
+.base_audio {
+    color: #F44336;
+}
+
+.vocal_audio {
+    color: #AFB42B;
+}
+
+.all_audio {
+    color: #222222;
+}
+
+.C4,
+.F3 {
+    color: #D84315;
+}
+
+button:disabled {
+    background: gray;
+    color: #fff;
+}

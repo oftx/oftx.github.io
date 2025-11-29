@@ -1,0 +1,99 @@
+---
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content="Astro description" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		<style is:global>
+			/* Markdown prose styles for vertical layout */
+			.astro-page {
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 2rem;
+				overflow-y: auto;
+				overflow-x: hidden;
+			}
+			
+			/* Reset any conflicting styles for markdown pages */
+			body:has(.astro-page) {
+				overflow-y: auto;
+				overflow-x: hidden;
+			}
+			
+			/* Ensure tables and code blocks don't exceed viewport */
+			.astro-page table {
+				display: block;
+				overflow-x: auto;
+				max-width: 100%;
+			}
+			
+			.astro-page pre {
+				overflow-x: auto;
+				max-width: 100%;
+			}
+			
+			.astro-page img {
+				max-width: 100%;
+				height: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<slot />
+		<script is:inline>
+			// Enhanced theme system with manual toggle support
+			function getPreferredTheme() {
+				// Check localStorage first
+				const stored = localStorage.getItem('theme');
+				if (stored) return stored;
+				
+				// Fall back to system preference
+				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+
+			function updateTheme(theme) {
+				if (!theme) theme = getPreferredTheme();
+				const isDark = theme === 'dark';
+				document.body.classList.toggle('dark-theme', isDark);
+				document.body.classList.toggle('light-theme', !isDark);
+				document.body.setAttribute('data-theme', theme);
+				
+				// Dispatch custom event for pages to react
+				window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme, isDark } }));
+			}
+
+			function toggleTheme() {
+				const current = document.body.getAttribute('data-theme') || getPreferredTheme();
+				const newTheme = current === 'dark' ? 'light' : 'dark';
+				localStorage.setItem('theme', newTheme);
+				updateTheme(newTheme);
+			}
+
+			// Make toggleTheme globally available
+			window.toggleTheme = toggleTheme;
+
+			// Initial theme setup
+			updateTheme();
+
+			// Listen for system changes (only if no manual preference)
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+				if (!localStorage.getItem('theme')) {
+					updateTheme(e.matches ? 'dark' : 'light');
+				}
+			});
+		</script>
+	</body>
+</html>

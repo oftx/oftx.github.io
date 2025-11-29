@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上音高測試</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="controls">
+        <h1 class="title">線上音高測試</h1>
+        <p style="opacity: 0;"><a href="https://bideyuanli.com/pp">参照网页</a></p>
+        <div class="actions">
+            <div class="view-toggle">
+                <input type="checkbox" id="viewSwitch" class="view-switch-checkbox">
+                <label for="viewSwitch" class="view-switch-label" style="opacity: 0;">
+                    <span class="toggle-option">音高曲線</span>
+                    <span class="toggle-option">原始頻譜</span>
+                </label>
+            </div>
+            <button id="recordButton" class="record-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                <span>開始錄音</span>
+            </button>
+        </div>
+    </header>
+
+    <main id="main_container">
+        <canvas id="canvas"></canvas>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

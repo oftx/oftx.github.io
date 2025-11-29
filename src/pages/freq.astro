@@ -1,0 +1,361 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Frequency Sound Generator">
+    <div class="header">
+        <div class="header-container">
+            <a href="/" class="home-button">Home</a>
+            <div class="title">FreqSndGen</div>
+            <div class="toggle-theme">
+                <button class="toggle-theme-button" onclick="window.toggleTheme()">Theme</button>
+            </div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="output-container">
+            <div class="message">Please check the volume before starting.</div>
+        </div>
+        <div class="content1">
+            <div class="control-left">
+                <div class="label">Left</div>
+                <div class="controls">
+                    <div class="number-container">
+                        <input type="number" class="hz-value" value="97">
+                    </div>
+                </div>
+                <select name="wave-shape" class="wave-select left">
+                    <option value="sine">sine</option>
+                    <option value="square">square</option>
+                    <option value="sawtooth">sawtooth</option>
+                    <option value="triangle">triangle</option>
+                </select>
+                <button class="toggle" onclick="startLeft()">Start</button>
+            </div>
+            <div class="control-right">
+                <div class="label">Right</div>
+                <div class="controls">
+                    <div class="number-container">
+                        <input type="number" class="hz-value" value="107">
+                    </div>
+                </div>
+                <select name="wave-shape" class="wave-select right">
+                    <option value="sine">sine</option>
+                    <option value="square">square</option>
+                    <option value="sawtooth">sawtooth</option>
+                    <option value="triangle">triangle</option>
+                </select>
+                <button class="toggle" onclick="startRight()">Start</button>
+            </div>
+        </div>
+        <div class="content2">
+            <button class="toggle" onclick="startAll()">Start All</button>
+            <div style="width: 20px;"></div>
+            <button class="toggle" onclick="setNeedStop(1)">Stop All</button>
+        </div>
+    </div>
+    <div class="footer">
+        <a href="https://github.com/oftx/oftx.github.io" class="github-link">GitHub</a>
+    </div>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap');
+        
+        body {
+            background-color: var(--body-bg-color); 
+            color: var(--topbar-text-color); 
+            font-size: min(max(2.4vh, 16px), 16px);
+            margin: 0;
+            font-family: "Noto Sans Mono", "Noto Sans SC";
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-style: normal;
+            transition: all 1s ease;
+        }
+
+        .header {
+            height: max(5vh, 29px);
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            width: 95vw;
+            height: 100%;}
+
+        .title {
+            float: left;
+        }
+
+        .toggle-theme {
+            float: right;
+        }
+
+        .content {
+            height: calc(100vh - max(5vh, 50px) - max(5vh, 29px));
+            margin-top: max(5vh, 29px);
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content1 {
+            height: 36%;
+            width: min(70%, 445px);
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+        .content2 {
+            height: 20%;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+        .control-left {
+            margin-left: 2.5vw;
+            margin-right: 2.5vw;
+            width: min(45%, 302px);
+            height: min(100%, 800px);
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-right {
+            margin-right: 2.5vw;
+            width: min(45%, 302px);
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-container {
+            border-radius: 12px;
+            color: var(--topbar-text-color);
+            padding: 16px;
+            margin-top: 10vh;
+            height: 36%;
+            width: min(max(35vw, 256px), 514px);
+            border: 2px solid var(--control-button-border-color);
+            background-color: var(--body-bg-color);
+            overflow-y: auto;
+        }
+
+        .output-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .output-container::-webkit-scrollbar-thumb {
+            background-color: #ffffff66;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: var(--control-button-bg-color); 
+            color: var(--topbar-text-color); 
+            border: none;
+            font-family: "Noto Sans Mono";
+            cursor: pointer;
+            transition: all 0.5s ease;
+        }
+
+        button:hover {
+            background-color: var(--default-button-hover-bg-color); 
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        input {
+            width: 50%;
+            padding: 10px;
+            border: 2px solid var(--input-border-color); 
+            border-radius: 8px;
+            font-family: "Noto Sans Mono";
+            font-size: min(max(2.4vh, 16px), 16px);
+            color: var(--input-color); 
+            background-color: var(--input-bg-color); 
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--slider-thumb-bg-color); 
+            outline: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .label {
+            margin-bottom: 1vh;
+            font-weight: 500;
+        }
+
+        .toggle {
+            width: min(50%, 20vw, 218px);
+            padding: 0.8vh 0.5vw;
+            border-radius: 8px;
+            font-size: min(max(2.4vh, 16px), 16px);
+        }
+
+        .number-container {
+            margin: 10px 0px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .number-container::after {
+            content: "Hz";
+            color: var(--span-hz-unit-color);
+            position: relative;
+            margin-left: -25px;
+            font-size: min(max(2.4vh, 16px), 16px);
+            top: 0px;
+            left: -4px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        select {
+            background-color: var(--input-bg-color);
+            color: var(--input-color);
+            border: 2px solid var(--input-border-color);
+            border-radius: 8px;
+            padding: 0.5vh 1vw;
+            margin-bottom: 1vh;
+            font-size: min(max(2.4vh, 16px), 16px);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        select:hover {
+            background-color: var(--default-button-hover-bg-color);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--slider-thumb-bg-color);
+        }
+
+        .footer {
+            height: max(5vh, 50px);
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--span-hz-unit-color); 
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .toggle-theme-button {
+            padding: 1vh 2vw;
+        }
+
+        .home-button {
+            padding: 8px 16px;
+            background-color: var(--control-button-bg-color); 
+            color: var(--topbar-text-color); 
+            border: 1px solid var(--control-button-border-color);
+            border-radius: 8px;
+            font-family: "Noto Sans Mono";
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .home-button:hover {
+            background-color: var(--default-button-hover-bg-color); 
+        }
+    </style>
+
+    <script is:inline>
+        let needStop = 0;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Theme toggle handled by inline onclick and global Layout script
+        });
+
+        function setNeedStop(value) {
+            needStop = value;
+        }
+
+        function startLeft() {
+            const waveType = document.querySelector('.control-left select').value;
+            const hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-left .hz-value').value));
+            playAudio('left', hzValue, waveType);
+        }
+
+        function startRight() {
+            const waveType = document.querySelector('.control-right select').value;
+            const hzValue = Math.max(0, Math.min(22050, document.querySelector('.control-right .hz-value').value));
+            playAudio('right', hzValue, waveType);
+        }
+
+        function startAll() {
+            startLeft();
+            startRight();
+        }
+
+        function playAudio(LeftOrRight, hz, waveType) {
+            const outputContainer = document.querySelector('.output-container');
+            // Use current computed color for the message
+            const msgColor = getComputedStyle(document.body).getPropertyValue('--topbar-text-color');
+            outputContainer.innerHTML += `<div class='message'>${LeftOrRight} | ${waveType} | ${hz}Hz</div>`;
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = waveType;
+            oscillator.frequency.setValueAtTime(hz, audioContext.currentTime);
+
+            const panNode = audioContext.createStereoPanner();
+            panNode.pan.value = LeftOrRight === 'left' ? -1 : 1;
+            oscillator.connect(panNode);
+            panNode.connect(audioContext.destination);
+
+            oscillator.start();
+            const checkNeedStop = setInterval(() => {
+                if (needStop === 1) {
+                    oscillator.stop();
+                    clearInterval(checkNeedStop);
+                    setTimeout(() => {
+                        setNeedStop(0);
+                    }, 120);
+                }
+            }, 100);
+        }
+    </script>
+</Layout>
