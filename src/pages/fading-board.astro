@@ -1,0 +1,230 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Fading Board">
+	<main>
+		<div class="controls">
+			<a href="/" class="back-btn">
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+				Back
+			</a>
+			<div class="hint">Draw something... it will fade away.</div>
+		</div>
+		<canvas id="board"></canvas>
+	</main>
+</Layout>
+
+<style>
+	main {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		overflow: hidden;
+		touch-action: none;
+		background-color: var(--bg-color, #fff);
+		transition: background-color 0.3s ease;
+	}
+
+	/* Dark theme support */
+	:global(body.dark-theme) main {
+		--bg-color: #1a1a1a;
+	}
+	:global(body.light-theme) main {
+		--bg-color: #ffffff;
+	}
+
+	canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
+		cursor: crosshair;
+	}
+
+	.controls {
+		position: absolute;
+		top: 20px;
+		left: 20px;
+		z-index: 10;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		pointer-events: none;
+	}
+
+	.back-btn {
+		pointer-events: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 20px;
+		background: rgba(128, 128, 128, 0.1);
+		backdrop-filter: blur(10px);
+		border-radius: 30px;
+		text-decoration: none;
+		color: var(--text-color, #333);
+		font-weight: 500;
+		border: 1px solid rgba(128, 128, 128, 0.2);
+		transition: all 0.2s ease;
+		width: fit-content;
+	}
+
+	:global(body.dark-theme) .back-btn {
+		color: #fff;
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.back-btn:hover {
+		transform: translateY(-2px);
+		background: rgba(128, 128, 128, 0.2);
+	}
+
+	.hint {
+		font-size: 0.9rem;
+		opacity: 0.6;
+		color: var(--text-color, #333);
+		margin-left: 5px;
+	}
+	:global(body.dark-theme) .hint {
+		color: #fff;
+	}
+</style>
+
+<script>
+	const canvas = document.getElementById('board') as HTMLCanvasElement;
+	const ctx = canvas.getContext('2d', { willReadFrequently: true });
+	
+	let isDrawing = false;
+	let lastX = 0;
+	let lastY = 0;
+	let lastActionTime = Date.now();
+	const FADE_DELAY = 1000; // Wait 1s before fading starts
+	const FADE_SPEED = 0.02; // Opacity of the fade layer (0.02 means slow fade)
+
+	// Theme colors
+	let strokeColor = '#000000';
+	let bgColor = '#ffffff';
+
+	function updateThemeColors() {
+		const isDark = document.body.classList.contains('dark-theme');
+		strokeColor = isDark ? '#ffffff' : '#000000';
+		bgColor = isDark ? '#1a1a1a' : '#ffffff';
+		
+		// We don't clear the canvas on theme switch, but the fade will use the new bg color
+		// which might look weird if there are existing strokes.
+		// Ideally we should invert the canvas content or clear it.
+		// Let's clear it to be clean.
+		// resizeCanvas(); // This clears it
+	}
+
+	function resizeCanvas() {
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+		// Fill with bg color initially
+		if (ctx) {
+			ctx.fillStyle = bgColor;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			
+			// Set line style
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+			ctx.lineWidth = 3;
+		}
+	}
+
+	function startDrawing(e: MouseEvent | TouchEvent) {
+		isDrawing = true;
+		lastActionTime = Date.now();
+		const { x, y } = getPos(e);
+		lastX = x;
+		lastY = y;
+	}
+
+	function stopDrawing() {
+		isDrawing = false;
+		lastActionTime = Date.now();
+		if (ctx) ctx.beginPath(); // Reset path
+	}
+
+	function draw(e: MouseEvent | TouchEvent) {
+		if (!isDrawing || !ctx) return;
+		
+		// Prevent scrolling on touch
+		if (e.type === 'touchmove') {
+			e.preventDefault();
+		}
+
+		lastActionTime = Date.now();
+		const { x, y } = getPos(e);
+
+		ctx.beginPath();
+		ctx.moveTo(lastX, lastY);
+		ctx.lineTo(x, y);
+		ctx.strokeStyle = strokeColor;
+		ctx.stroke();
+
+		lastX = x;
+		lastY = y;
+	}
+
+	function getPos(e: MouseEvent | TouchEvent) {
+		if ('touches' in e) {
+			return {
+				x: e.touches[0].clientX,
+				y: e.touches[0].clientY
+			};
+		} else {
+			return {
+				x: (e as MouseEvent).clientX,
+				y: (e as MouseEvent).clientY
+			};
+		}
+	}
+
+	function loop() {
+		if (!ctx) return;
+
+		const now = Date.now();
+		if (now - lastActionTime > FADE_DELAY) {
+			// Fade out
+			ctx.save();
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.fillStyle = bgColor;
+			ctx.globalAlpha = FADE_SPEED;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.restore();
+		}
+
+		requestAnimationFrame(loop);
+	}
+
+	// Event Listeners
+	window.addEventListener('resize', resizeCanvas);
+	
+	canvas.addEventListener('mousedown', startDrawing);
+	canvas.addEventListener('mousemove', draw);
+	canvas.addEventListener('mouseup', stopDrawing);
+	canvas.addEventListener('mouseout', stopDrawing);
+
+	canvas.addEventListener('touchstart', startDrawing, { passive: false });
+	canvas.addEventListener('touchmove', draw, { passive: false });
+	canvas.addEventListener('touchend', stopDrawing);
+
+	// Theme listener
+	window.addEventListener('themeChanged', () => {
+		updateThemeColors();
+		// Optional: Clear canvas or handle transition
+		// For now, we just update colors so new strokes and fading use new colors
+	});
+
+	// Initial setup
+	// Wait for DOM to be ready and theme to be applied
+	setTimeout(() => {
+		updateThemeColors();
+		resizeCanvas();
+		loop();
+	}, 100);
+
+</script>
