@@ -86,17 +86,22 @@ import Layout from '../layouts/Layout.astro';
 
         .header-container {
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             display: flex;
             width: 95vw;
-            height: 100%;}
+            max-width: 1200px;
+            height: 100%;
+            padding: 0 20px;
+        }
 
         .title {
-            float: left;
+            font-weight: 600;
+            font-size: 1.1rem;
+            letter-spacing: -0.01em;
         }
 
         .toggle-theme {
-            float: right;
+            /* No float needed with flexbox */
         }
 
         .content {
@@ -276,10 +281,7 @@ import Layout from '../layouts/Layout.astro';
             text-decoration: underline;
         }
 
-        .toggle-theme-button {
-            padding: 1vh 2vw;
-        }
-
+        .toggle-theme-button,
         .home-button {
             padding: 8px 16px;
             background-color: var(--control-button-bg-color); 
@@ -287,17 +289,26 @@ import Layout from '../layouts/Layout.astro';
             border: 1px solid var(--control-button-border-color);
             border-radius: 8px;
             font-family: "Noto Sans Mono";
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.2s ease;
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            z-index: 10;
+            white-space: nowrap;
         }
         
+        .toggle-theme-button:hover,
         .home-button:hover {
-            background-color: var(--default-button-hover-bg-color); 
+            background-color: var(--default-button-hover-bg-color);
+            transform: translateY(-1px);
+        }
+
+        .toggle-theme-button:active,
+        .home-button:active {
+            transform: translateY(0);
+            opacity: 0.9;
         }
     </style>
 
