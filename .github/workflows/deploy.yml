@@ -1,0 +1,36 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 当推送到 main 分支时触发（如果你的主分支叫 master，请修改此处）
+  push:
+    branches: [ main ]
+  # 允许在 Actions 标签页手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository using git
+        uses: actions/checkout@v4
+      
+      - name: Install, build, and upload your site
+        uses: withastro/action@v2
+        # 注意：此 Action 会自动检测 package-lock.json / pnpm-lock.yaml 等
+        # 确保你已经将锁文件提交到了仓库中
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
