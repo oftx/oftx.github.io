@@ -1,0 +1,1518 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="QR Code Tool">
+  <main class="container">
+    <div class="header">
+      <a href="/" class="nav-back">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg
+        >
+        Back to Tools
+      </a>
+      <h1>QR Code Tool</h1>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="scan">Scan QR Code</button>
+      <button class="tab-btn" data-tab="generate">Generate QR Code</button>
+    </div>
+
+    <div class="tab-content active" id="scan-tab">
+      <div class="card scan-card">
+        <div id="scan-image-display" class="image-display-box hidden">
+          <img id="displayed-scan-image" src="" alt="Scanned Image" />
+        </div>
+        <div id="reader"></div>
+        <div class="scan-options">
+          <div class="file-upload-wrapper">
+            <label for="qr-input-file" class="btn secondary">Upload Image</label
+            >
+            <input
+              type="file"
+              id="qr-input-file"
+              accept="image/*"
+              style="display: none;"
+            />
+            <button
+              id="restart-camera-btn"
+              class="btn secondary hidden"
+              style="display: flex; align-items: center; gap: 0.5rem;"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path
+                  d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                ></path><circle cx="12" cy="13" r="4"></circle></svg
+              >
+              Scan with Camera
+            </button>
+          </div>
+          <p class="paste-hint">
+            Or paste (Ctrl+V) an image anywhere on this page
+          </p>
+        </div>
+        <div id="scan-result" class="result-box hidden">
+          <div class="result-header">
+            <h3>Scan Result</h3>
+            <button id="copy-result" class="btn small">Copy</button>
+          </div>
+          <p id="result-text"></p>
+        </div>
+
+        <!-- Scan History Section -->
+        <div id="scan-history-section" class="history-section">
+          <div class="history-header">
+            <h3>Scan History</h3>
+            <button id="clear-history" class="btn small secondary"
+              >Clear All</button
+            >
+          </div>
+          <div id="history-empty" class="history-empty">
+            No scan history yet
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="generate-tab">
+      <div class="card generate-card">
+        <div class="input-group">
+          <label for="text-input">Enter text or URL:</label>
+          <textarea
+            id="text-input"
+            rows="4"
+            placeholder="Type something to generate QR code..."></textarea>
+        </div>
+        <div class="actions">
+          <button id="generate-btn" class="btn primary">Generate</button>
+        </div>
+        <div id="qr-output" class="output-box hidden">
+          <img id="generated-qr" alt="Generated QR Code" />
+          <a id="download-link" class="btn secondary" download="qrcode.png"
+            >Download</a
+          >
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { Html5Qrcode, Html5QrcodeScanner } from "html5-qrcode";
+  import QRCode from "qrcode";
+
+  // Tab Switching
+  const tabs = document.querySelectorAll(".tab-btn");
+  const contents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      contents.forEach((c) => c.classList.remove("active"));
+      tab.classList.add("active");
+      const tabId = (tab as HTMLElement).dataset.tab;
+      const content = document.getElementById(`${tabId}-tab`);
+      if (content) content.classList.add("active");
+
+      // Stop scanner if switching away from scan tab
+      if (tabId !== "scan" && html5QrCode) {
+        stopScanner();
+      }
+    });
+  });
+
+  // --- Scanning Logic ---
+  let html5QrCode: Html5Qrcode | null = null;
+  const readerElement = document.getElementById("reader");
+  const resultBox = document.getElementById("scan-result");
+  const resultText = document.getElementById("result-text");
+  const copyBtn = document.getElementById("copy-result");
+  const fileInput = document.getElementById(
+    "qr-input-file",
+  ) as HTMLInputElement | null;
+
+  const restartCameraBtn = document.getElementById("restart-camera-btn");
+  const scanImageDisplay = document.getElementById("scan-image-display");
+  const displayedScanImage = document.getElementById(
+    "displayed-scan-image",
+  ) as HTMLImageElement | null;
+
+  function showStartButton() {
+    if (!readerElement) return;
+
+    // Clear reader and set styles for centering
+    readerElement.innerHTML = "";
+    readerElement.style.display = "flex";
+    readerElement.style.alignItems = "center";
+    readerElement.style.justifyContent = "center";
+
+    const startCameraBtn = document.createElement("button");
+    startCameraBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+        Start Camera Scan
+      `;
+    startCameraBtn.className = "btn secondary";
+    startCameraBtn.style.display = "flex";
+    startCameraBtn.style.alignItems = "center";
+    startCameraBtn.style.gap = "0.5rem";
+
+    startCameraBtn.addEventListener("click", () => {
+      startScanner();
+    });
+
+    readerElement.appendChild(startCameraBtn);
+  }
+
+  if (restartCameraBtn) {
+    restartCameraBtn.addEventListener("click", () => {
+      if (scanImageDisplay) scanImageDisplay.classList.add("hidden");
+      restartCameraBtn.classList.add("hidden"); // Hide button when camera starts
+      startScanner();
+    });
+  }
+
+  // === Scan History Management ===
+  const HISTORY_KEY = "qr_scan_history";
+  const MAX_HISTORY = 50;
+
+  interface HistoryItem {
+    id: number;
+    timestamp: string;
+    text: string;
+    image: string;
+  }
+
+  function loadHistory(): HistoryItem[] {
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error("Failed to load history:", e);
+      return [];
+    }
+  }
+
+  function saveHistory(history: HistoryItem[]) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch (e) {
+      console.error("Failed to save history:", e);
+    }
+  }
+
+  function addToHistory(text: string, imageDataUrl: string) {
+    const history = loadHistory();
+    const newItem: HistoryItem = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      text: text,
+      image: imageDataUrl,
+    };
+
+    // Add to beginning, limit to MAX_HISTORY
+    history.unshift(newItem);
+    if (history.length > MAX_HISTORY) {
+      history.pop();
+    }
+
+    saveHistory(history);
+    renderHistory();
+  }
+
+  function deleteHistoryItem(id: number) {
+    const history = loadHistory();
+    const filtered = history.filter((item) => item.id !== id);
+    saveHistory(filtered);
+    renderHistory();
+  }
+
+  function clearAllHistory() {
+    if (confirm("Are you sure you want to clear all scan history?")) {
+      saveHistory([]);
+      renderHistory();
+    }
+  }
+
+  function formatTime(isoString: string) {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  function renderHistory() {
+    const history = loadHistory();
+    const historyList = document.getElementById("history-list");
+    const historyEmpty = document.getElementById("history-empty");
+
+    if (!historyList || !historyEmpty) return;
+
+    if (history.length === 0) {
+      historyEmpty.style.display = "block";
+      historyList.innerHTML = "";
+      return;
+    }
+
+    historyEmpty.style.display = "none";
+    historyList.innerHTML = history
+      .map(
+        (item) => `
+      <div class="history-item">
+        <div class="history-left">
+            <div class="history-result-box">
+                <div class="history-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</div>
+            </div>
+            <div class="history-actions">
+                <button class="action-btn copy-btn" onclick="copyToClipboard('${escapeHtml(item.text).replace(/'/g, "\\'")}', this)" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button class="action-btn delete-btn" onclick="deleteHistoryItem(${item.id})" title="Delete item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="history-right">
+            <div class="history-image-wrapper">
+                <img src="${item.image}" alt="QR Code" class="history-qr-image" onclick="openImageModal('${item.image}')">
+            </div>
+            <div class="history-time">${formatTime(item.timestamp)}</div>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+  }
+
+  function copyToClipboard(text: string, btnElement: HTMLElement) {
+    navigator.clipboard.writeText(text).then(() => {
+      const originalHtml = btnElement.innerHTML;
+      btnElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      btnElement.classList.add("success");
+      setTimeout(() => {
+        btnElement.innerHTML = originalHtml;
+        btnElement.classList.remove("success");
+      }, 2000);
+    });
+  }
+
+  function openImageModal(src: string) {
+    // Optional: Implement a modal to view full image if needed
+    // For now, maybe just open in new tab or do nothing
+    // window.open(src, '_blank');
+  }
+
+  // Make functions global
+  (window as any).copyToClipboard = copyToClipboard;
+  (window as any).openImageModal = openImageModal;
+
+  function escapeHtml(text: string) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Make delete functions available globally
+  (window as any).deleteHistoryItem = deleteHistoryItem;
+
+  function onScanSuccess(decodedText: string, decodedResult: any) {
+    console.log("=== QR CODE SCANNED ===");
+    console.log("Decoded text:", decodedText);
+    console.log("Result object type:", typeof decodedResult);
+
+    // 1. Capture and Warp Image (BEFORE stopping scanner)
+    const video = document.querySelector(
+      "#reader video",
+    ) as HTMLVideoElement | null;
+    let croppedImage = null;
+    if (video) {
+      croppedImage = processQrImage(video, decodedResult);
+    } else {
+      console.warn("Video element not found for capture.");
+    }
+
+    // 2. Stop scanning immediately and show result
+    stopScanner();
+    showResult(decodedText);
+
+    // 3. Save to history
+    if (croppedImage) {
+      addToHistory(decodedText, croppedImage);
+    }
+  }
+
+  function processQrImage(videoElement: HTMLVideoElement, decodedResult: any) {
+    console.log("processQrImage called");
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoElement.videoWidth;
+    canvas.height = videoElement.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+    console.log("Canvas size:", canvas.width, "x", canvas.height);
+
+    let croppedDataUrl = null;
+
+    // Try to get points - check multiple possible locations
+    console.log("Checking for points...");
+    console.log("decodedResult.resultPoints:", decodedResult.resultPoints);
+    console.log("decodedResult.result:", decodedResult.result);
+
+    // Check debugData
+    if (decodedResult.result && decodedResult.result.debugData) {
+      console.log(
+        "debugData keys:",
+        Object.keys(decodedResult.result.debugData),
+      );
+      console.log("debugData:", decodedResult.result.debugData);
+    }
+
+    // Try multiple locations for points
+    let points =
+      decodedResult.resultPoints ||
+      (decodedResult.result && decodedResult.result.resultPoints) ||
+      (decodedResult.result &&
+        decodedResult.result.debugData &&
+        decodedResult.result.debugData.resultPoints);
+
+    if (points && points.length >= 3) {
+      console.log("✓ Points found! Count:", points.length);
+      console.log("Point 0:", points[0]);
+      console.log("Point 1:", points[1]);
+      console.log("Point 2:", points[2]);
+
+      // Simple bounding box crop
+      const xs = points.map((p: any) => p.x);
+      const ys = points.map((p: any) => p.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      console.log("Bounding box:", { minX, maxX, minY, maxY });
+
+      // Add padding (20% of size)
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const padding = Math.max(width, height) * 0.2;
+
+      const cropX = Math.max(0, minX - padding);
+      const cropY = Math.max(0, minY - padding);
+      const cropWidth = Math.min(canvas.width - cropX, width + padding * 2);
+      const cropHeight = Math.min(canvas.height - cropY, height + padding * 2);
+
+      console.log("Crop region:", { cropX, cropY, cropWidth, cropHeight });
+
+      // Create cropped canvas
+      const croppedCanvas = document.createElement("canvas");
+      croppedCanvas.width = cropWidth;
+      croppedCanvas.height = cropHeight;
+      const croppedCtx = croppedCanvas.getContext("2d");
+      if (croppedCtx) {
+        croppedCtx.drawImage(
+          canvas,
+          cropX,
+          cropY,
+          cropWidth,
+          cropHeight,
+          0,
+          0,
+          cropWidth,
+          cropHeight,
+        );
+        croppedDataUrl = croppedCanvas.toDataURL();
+        console.log("✓ Successfully cropped QR code");
+      }
+    } else {
+      console.warn("✗ No resultPoints found in any location");
+      if (decodedResult) {
+        const keys = Object.keys(decodedResult);
+        console.log("Available keys:", keys);
+        keys.forEach((key) => {
+          console.log(`  ${key}:`, typeof decodedResult[key]);
+        });
+      }
+
+      // As fallback, try to use the qrbox overlay coordinates
+      // The QR code should be roughly in the center within the defined qrbox (250x250)
+      console.log("Attempting fallback: using qrbox region");
+      const qrboxSize = 250; // Match our config exactly
+      const cropX = (canvas.width - qrboxSize) / 2;
+      const cropY = (canvas.height - qrboxSize) / 2;
+
+      console.log("Fallback crop (center):", { cropX, cropY, size: qrboxSize });
+
+      const croppedCanvas = document.createElement("canvas");
+      croppedCanvas.width = qrboxSize;
+      croppedCanvas.height = qrboxSize;
+      const croppedCtx = croppedCanvas.getContext("2d");
+      if (croppedCtx) {
+        croppedCtx.drawImage(
+          canvas,
+          cropX,
+          cropY,
+          qrboxSize,
+          qrboxSize,
+          0,
+          0,
+          qrboxSize,
+          qrboxSize,
+        );
+        croppedDataUrl = croppedCanvas.toDataURL();
+        console.log("✓ Using center crop as fallback");
+      }
+    }
+
+    // Final fallback: if still failed, use full image
+    if (!croppedDataUrl) {
+      console.warn("Using full frame as last resort");
+      croppedDataUrl = canvas.toDataURL();
+    }
+
+    // No longer display image in result box - only in history
+    return croppedDataUrl; // Return for history saving
+  }
+
+  // Robust Perspective Warp Implementation
+  function warpPerspective(sourceCanvas: HTMLCanvasElement, points: any[]) {
+    if (!points || points.length < 3) {
+      console.warn("warpPerspective: insufficient points", points);
+      return null;
+    }
+
+    try {
+      // Convert to array of {x, y}
+      let pts = points.map((p: any) => ({ x: p.x, y: p.y }));
+      console.log("warpPerspective: converted points", pts);
+
+      // We need exactly 4 points for homography.
+      // QR codes usually provide 3 finder patterns (corners).
+      if (pts.length === 3) {
+        console.log(
+          "warpPerspective: estimating 4th point from 3 finder patterns",
+        );
+        // Identify the "central" corner (Top-Left in standard orientation, but could be rotated).
+        // The 3 points form a triangle. The "corner" of the L-shape is the vertex opposite the longest side (hypotenuse).
+
+        let maxDist = -1;
+        let hypotenuseIndices = [-1, -1];
+
+        // Find longest distance between any pair
+        for (let i = 0; i < 3; i++) {
+          for (let j = i + 1; j < 3; j++) {
+            const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+            if (d > maxDist) {
+              maxDist = d;
+              hypotenuseIndices = [i, j];
+            }
+          }
+        }
+
+        console.log(
+          "warpPerspective: hypotenuse indices",
+          hypotenuseIndices,
+          "max distance",
+          maxDist,
+        );
+
+        // The point NOT in hypotenuseIndices is the central corner (Top-Left relative to the code)
+        const cornerIdx = [0, 1, 2].find((i) => !hypotenuseIndices.includes(i));
+        if (cornerIdx === undefined) return null;
+        const pCorner = pts[cornerIdx];
+        const pArm1 = pts[hypotenuseIndices[0]];
+        const pArm2 = pts[hypotenuseIndices[1]];
+
+        console.log(
+          "warpPerspective: corner point",
+          pCorner,
+          "arm1",
+          pArm1,
+          "arm2",
+          pArm2,
+        );
+
+        // Estimate 4th point (Bottom-Right relative to the code)
+        // Vector addition: P4 = P_arm1 + P_arm2 - P_corner
+        const p4 = {
+          x: pArm1.x + pArm2.x - pCorner.x,
+          y: pArm1.y + pArm2.y - pCorner.y,
+        };
+
+        console.log("warpPerspective: estimated 4th point", p4);
+
+        // Now we have 4 points.
+        pts.push(p4);
+      }
+
+      // Now we have 4 points forming a quad.
+      // We need to sort them into: TL, TR, BR, BL relative to the image frame to map to [0,0], [w,0], [w,h], [0,h]
+      // However, we want to preserve the QR code orientation if possible?
+      // Actually, standard homography usually maps:
+      // 0: TL -> (0,0)
+      // 1: TR -> (w,0)
+      // 2: BR -> (w,h)
+      // 3: BL -> (0,h)
+
+      // Let's sort them spatially to ensure the output image is upright-ish.
+      // Center point
+      const cx = pts.reduce((s, p) => s + p.x, 0) / 4;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / 4;
+
+      // Sort by angle from center
+      // -135deg (TL), -45deg (TR), 45deg (BR), 135deg (BL)
+      pts.sort((a, b) => {
+        return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
+      });
+
+      // Determine output size based on the perimeter or area
+      const side1 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const side2 = Math.hypot(pts[1].x - pts[2].x, pts[1].y - pts[2].y);
+      const side3 = Math.hypot(pts[2].x - pts[3].x, pts[2].y - pts[3].y);
+      const side4 = Math.hypot(pts[3].x - pts[0].x, pts[3].y - pts[0].y);
+
+      // Use max side length for better resolution
+      const size = Math.max(side1, side2, side3, side4, 200);
+
+      // Create destination canvas
+      const destCanvas = document.createElement("canvas");
+      destCanvas.width = size;
+      destCanvas.height = size;
+      const destCtx = destCanvas.getContext("2d");
+      if (!destCtx) return null;
+
+      const srcCtx = sourceCanvas.getContext("2d");
+      if (!srcCtx) return null;
+
+      const srcData = srcCtx.getImageData(
+        0,
+        0,
+        sourceCanvas.width,
+        sourceCanvas.height,
+      );
+      const destData = destCtx.createImageData(size, size);
+
+      // Destination points (standard square)
+      const dstPts = [
+        { x: 0, y: 0 }, // TL
+        { x: size, y: 0 }, // TR
+        { x: size, y: size }, // BR
+        { x: 0, y: size }, // BL
+      ];
+
+      // Calculate Homography Matrix H mapping Dest -> Source
+      const h = getHomographyMatrix(dstPts, pts);
+
+      // Iterate dest pixels (Inverse Mapping)
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          // Apply H to (x, y) to find source coordinate
+          const D = h[6] * x + h[7] * y + 1;
+          const srcX = (h[0] * x + h[1] * y + h[2]) / D;
+          const srcY = (h[3] * x + h[4] * y + h[5]) / D;
+
+          if (
+            srcX >= 0 &&
+            srcX < sourceCanvas.width &&
+            srcY >= 0 &&
+            srcY < sourceCanvas.height
+          ) {
+            // Bilinear interpolation for smoother result?
+            // Nearest neighbor is faster and usually fine for QR codes (sharp edges).
+            // Let's stick to Nearest Neighbor for performance.
+            const sx = Math.floor(srcX);
+            const sy = Math.floor(srcY);
+            const srcIdx = (sy * sourceCanvas.width + sx) * 4;
+            const dstIdx = (y * size + x) * 4;
+
+            destData.data[dstIdx] = srcData.data[srcIdx];
+            destData.data[dstIdx + 1] = srcData.data[srcIdx + 1];
+            destData.data[dstIdx + 2] = srcData.data[srcIdx + 2];
+            destData.data[dstIdx + 3] = 255; // Alpha
+          }
+        }
+      }
+
+      destCtx.putImageData(destData, 0, 0);
+      return destCanvas.toDataURL();
+    } catch (e) {
+      console.error("Warp failed", e);
+      return null;
+    }
+  }
+
+  // Gaussian elimination to solve for H
+  function getHomographyMatrix(src: any[], dst: any[]) {
+    let a = [];
+    let b = [];
+
+    for (let i = 0; i < 4; i++) {
+      let x = src[i].x;
+      let y = src[i].y;
+      let X = dst[i].x;
+      let Y = dst[i].y;
+
+      a.push([x, y, 1, 0, 0, 0, -x * X, -y * X]);
+      b.push(X);
+
+      a.push([0, 0, 0, x, y, 1, -x * Y, -y * Y]);
+      b.push(Y);
+    }
+
+    const x = solveLinearSystem(a, b);
+    return [...x, 1];
+  }
+
+  function solveLinearSystem(A: number[][], B: number[]) {
+    const n = A.length;
+
+    for (let i = 0; i < n; i++) {
+      let maxEl = Math.abs(A[i][i]);
+      let maxRow = i;
+      for (let k = i + 1; k < n; k++) {
+        if (Math.abs(A[k][i]) > maxEl) {
+          maxEl = Math.abs(A[k][i]);
+          maxRow = k;
+        }
+      }
+
+      for (let k = i; k < n; k++) {
+        let tmp = A[maxRow][k];
+        A[maxRow][k] = A[i][k];
+        A[i][k] = tmp;
+      }
+      let tmp = B[maxRow];
+      B[maxRow] = B[i];
+      B[i] = tmp;
+
+      for (let k = i + 1; k < n; k++) {
+        let c = -A[k][i] / A[i][i];
+        for (let j = i; j < n; j++) {
+          if (i === j) {
+            A[k][j] = 0;
+          } else {
+            A[k][j] += c * A[i][j];
+          }
+        }
+        B[k] += c * B[i];
+      }
+    }
+
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      let sum = 0;
+      for (let j = i + 1; j < n; j++) {
+        sum += A[i][j] * x[j];
+      }
+      x[i] = (B[i] - sum) / A[i][i];
+    }
+    return x;
+  }
+
+  function onScanFailure(error: any) {
+    // handle scan failure
+  }
+
+  function showResult(text: string) {
+    if (resultText) resultText.textContent = text;
+    if (resultBox) resultBox.classList.remove("hidden");
+  }
+
+  function startScanner() {
+    if (!readerElement) return;
+
+    // Reset reader styles for video (block is usually better for the video container)
+    readerElement.style.display = "block";
+    readerElement.innerHTML = ""; // Clear button
+    if (scanImageDisplay) scanImageDisplay.classList.add("hidden"); // Ensure image display is hidden
+    if (restartCameraBtn) restartCameraBtn.classList.add("hidden"); // Ensure camera button is hidden
+
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qrcode("reader");
+    }
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    html5QrCode
+      .start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanFailure,
+      )
+      .catch((err: any) => {
+        console.error("Error starting scanner", err);
+        if (readerElement)
+          readerElement.innerHTML = `<p class="error">Error starting camera: ${err}</p>`;
+        // If error, maybe show button again?
+        setTimeout(showStartButton, 3000);
+      });
+  }
+
+  function stopScanner() {
+    if (html5QrCode && html5QrCode.isScanning) {
+      html5QrCode
+        .stop()
+        .then(() => {
+          console.log("Scanner stopped");
+          showStartButton();
+        })
+        .catch((err: any) => {
+          console.error("Failed to stop scanner", err);
+          showStartButton();
+        });
+    }
+  }
+
+  // Initialize: Show start button and render history
+  showStartButton();
+  renderHistory();
+
+  // Clear history button
+  const clearHistoryBtn = document.getElementById("clear-history");
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener("click", clearAllHistory);
+  }
+
+  // File Upload
+  if (fileInput) {
+    fileInput.addEventListener("change", (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (!target.files || target.files.length == 0) return;
+      const imageFile = target.files[0];
+
+      // Create temporary div for scanning
+      const tempDiv = document.createElement("div");
+      tempDiv.id = "qr-file-scan-temp";
+      tempDiv.style.display = "none";
+      document.body.appendChild(tempDiv);
+
+      const tempScanner = new Html5Qrcode(tempDiv.id);
+      tempScanner
+        .scanFile(imageFile, true)
+        .then((decodedText: string) => {
+          // Create image from file for history and display
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target && event.target.result) {
+              getCroppedImageFromFile(event.target.result as string).then(
+                (croppedUrl) => {
+                  showResult(decodedText);
+                  addToHistory(decodedText, croppedUrl);
+
+                  // Display image in scan card
+                  if (displayedScanImage) displayedScanImage.src = croppedUrl;
+                  if (scanImageDisplay)
+                    scanImageDisplay.classList.remove("hidden");
+                  if (readerElement) readerElement.style.display = "none"; // Hide reader/start button
+                  if (restartCameraBtn)
+                    restartCameraBtn.classList.remove("hidden"); // Show camera button
+                },
+              );
+            }
+          };
+          reader.readAsDataURL(imageFile);
+        })
+        .catch((err: any) => {
+          console.error("Error scanning file", err);
+          alert("No QR code found in image.");
+        })
+        .finally(() => {
+          // Clean up
+          try {
+            tempScanner.clear();
+          } catch (e) {
+            console.log("Clear error:", e);
+          }
+          tempDiv.remove();
+          if (fileInput) fileInput.value = "";
+        });
+    });
+  }
+
+  // Paste Handling
+  document.addEventListener("paste", (e: ClipboardEvent) => {
+    // Only handle paste if we are on the scan tab
+    const scanTab = document.getElementById("scan-tab");
+    if (!scanTab || !scanTab.classList.contains("active")) return;
+
+    const items = (e.clipboardData || (e as any).originalEvent.clipboardData)
+      .items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file") {
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        const file = new File([blob], "paste.png", { type: blob.type });
+
+        // Create temporary div for scanning
+        const tempDiv = document.createElement("div");
+        tempDiv.id = "qr-paste-scan-temp-" + Date.now();
+        tempDiv.style.display = "none";
+        document.body.appendChild(tempDiv);
+
+        const tempScanner = new Html5Qrcode(tempDiv.id);
+        tempScanner
+          .scanFile(file, true)
+          .then((decodedText: string) => {
+            // Create image from file for history and display
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target && event.target.result) {
+                getCroppedImageFromFile(event.target.result as string).then(
+                  (croppedUrl) => {
+                    showResult(decodedText);
+                    addToHistory(decodedText, croppedUrl);
+
+                    // Display image in scan card
+                    if (displayedScanImage) displayedScanImage.src = croppedUrl;
+                    if (scanImageDisplay)
+                      scanImageDisplay.classList.remove("hidden");
+                    if (readerElement) readerElement.style.display = "none"; // Hide reader/start button
+                    if (restartCameraBtn)
+                      restartCameraBtn.classList.remove("hidden"); // Show camera button
+                  },
+                );
+              }
+            };
+            reader.readAsDataURL(file);
+          })
+          .catch((err: any) => {
+            console.error("Error scanning pasted image", err);
+            alert("No QR code found in pasted image.");
+          })
+          .finally(() => {
+            try {
+              tempScanner.clear();
+            } catch (e) {
+              console.log("Clear error:", e);
+            }
+            tempDiv.remove();
+          });
+      }
+    }
+  });
+
+  // Helper function to create cropped image from uploaded/pasted file
+  function getCroppedImageFromFile(dataUrl: string): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create a canvas and draw a center crop (similar to camera scan)
+        const canvas = document.createElement("canvas");
+        const size = 250;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        if (ctx) {
+          // Calculate crop to center
+          const aspectRatio = img.width / img.height;
+          let sourceSize = Math.min(img.width, img.height);
+          let sx = (img.width - sourceSize) / 2;
+          let sy = (img.height - sourceSize) / 2;
+
+          ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+          resolve(canvas.toDataURL());
+        } else {
+          resolve(dataUrl); // Fallback
+        }
+      };
+      img.src = dataUrl;
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      if (resultText) {
+        navigator.clipboard.writeText(resultText.textContent || "").then(() => {
+          const originalHtml = copyBtn.innerHTML;
+          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          copyBtn.classList.add("success");
+          setTimeout(() => {
+            copyBtn.innerHTML = originalHtml;
+            copyBtn.classList.remove("success");
+          }, 2000);
+        });
+      }
+    });
+  }
+
+  // --- Generation Logic ---
+  const generateBtn = document.getElementById("generate-btn");
+  const textInput = document.getElementById(
+    "text-input",
+  ) as HTMLTextAreaElement | null;
+  const qrOutput = document.getElementById("qr-output");
+  const generatedQr = document.getElementById(
+    "generated-qr",
+  ) as HTMLImageElement | null;
+  const downloadLink = document.getElementById(
+    "download-link",
+  ) as HTMLAnchorElement | null;
+
+  if (generateBtn && textInput && qrOutput && generatedQr && downloadLink) {
+    generateBtn.addEventListener("click", async () => {
+      const text = textInput.value.trim();
+      if (!text) return;
+
+      try {
+        const url = await QRCode.toDataURL(text, { width: 300, margin: 2 });
+        generatedQr.src = url;
+        downloadLink.href = url;
+        qrOutput.classList.remove("hidden");
+      } catch (err) {
+        console.error(err);
+        alert("Error generating QR code");
+      }
+    });
+  }
+</script>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+  }
+
+  /* Button Styles - Ensure consistency across elements */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    border: 1px solid transparent;
+    text-decoration: none;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+
+  .btn.secondary {
+    background: var(--control-button-bg-color);
+    color: var(--topbar-text-color);
+    border-color: var(--control-button-border-color);
+  }
+
+  .btn.secondary:hover {
+    background: var(--default-button-hover-bg-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Specific override for button element to remove default styles */
+  button.btn {
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .btn.small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .header {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 40px;
+  }
+  .nav-back {
+    position: absolute;
+    left: 0;
+    color: var(--default-button-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.2s;
+  }
+  .nav-back:hover {
+    color: var(--topbar-text-color);
+    text-decoration: none;
+  }
+  h1 {
+    margin: 0;
+    background: linear-gradient(45deg, var(--topbar-text-color), #666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    color: var(--default-button-color);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    color: var(--topbar-text-color);
+    border-bottom-color: var(--topbar-text-color);
+    font-weight: 600;
+  }
+
+  .tab-content {
+    display: none;
+  }
+  .tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .card {
+    background: var(--control-button-bg-color);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--control-button-border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Scan Styles */
+  #reader {
+    width: 100%;
+    min-height: 300px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .scan-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .file-upload-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .paste-hint {
+    font-size: 0.9rem;
+    color: var(--default-button-color);
+    opacity: 0.8;
+  }
+  /* Image Display Box */
+  .image-display-box {
+    width: 100%;
+    min-height: 300px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .image-display-box img {
+    max-width: 100%;
+    max-height: 250px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Result Box Styles */
+  .result-box {
+    background: var(--control-button-bg-color);
+    border-radius: 16px;
+    border: 1px solid var(--control-button-border-color);
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-top: 1.5rem;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .result-box h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--topbar-text-color);
+  }
+
+  .result-box p {
+    margin: 0;
+    font-family: "Menlo", "Monaco", "Courier New", monospace;
+    font-size: 1rem;
+    color: var(--topbar-text-color);
+    line-height: 1.6;
+    word-break: break-all;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--topbar-text-color);
+  }
+
+  /* Scan History Styles - Strict Layout & Modern Design */
+  .history-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--control-button-border-color);
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  .history-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--topbar-text-color);
+    letter-spacing: -0.5px;
+  }
+
+  .history-empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--default-button-color);
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 16px;
+    border: 2px dashed var(--control-button-border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+  }
+  .history-empty:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: var(--default-button-color);
+  }
+  .history-empty::before {
+    content: "📜";
+    font-size: 3.5rem;
+    opacity: 0.7;
+    filter: grayscale(100%);
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .history-item {
+    background: var(--control-button-bg-color);
+    border-radius: 16px;
+    border: 1px solid var(--control-button-border-color);
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto; /* Strict Left/Right Split */
+    gap: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .history-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--topbar-text-color);
+  }
+
+  /* Left Column: Text and Actions */
+  .history-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0; /* Enable text truncation */
+  }
+
+  .history-result-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .history-result-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--default-button-color);
+    font-weight: 600;
+  }
+
+  .history-text {
+    font-family: "Menlo", "Monaco", "Courier New", monospace;
+    font-size: 0.95rem;
+    color: var(--topbar-text-color);
+    line-height: 1.6;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-weight: 500;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 1rem;
+    border-radius: 8px;
+    /* Removed border-left accent */
+  }
+
+  .history-item:hover .history-text {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  .history-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--control-button-border-color);
+    background: transparent;
+    color: var(--default-button-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-btn:hover {
+    border-color: var(--topbar-text-color);
+    color: var(--topbar-text-color);
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(1.05);
+  }
+
+  .action-btn.delete-btn:hover {
+    border-color: #ff3b30;
+    color: #ff3b30;
+    background: rgba(255, 59, 48, 0.05);
+  }
+
+  .action-btn.success {
+    color: #34c759;
+    border-color: #34c759;
+    background: rgba(52, 199, 89, 0.1);
+  }
+
+  /* Right Column: Image and Time */
+  .history-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Align to right */
+    gap: 0.75rem;
+    width: 140px; /* Fixed width */
+    flex-shrink: 0;
+  }
+
+  .history-image-wrapper {
+    width: 140px;
+    height: 140px;
+    background: #fff;
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--control-button-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .history-qr-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+  }
+
+  .history-item:hover .history-qr-image {
+    transform: scale(1.05);
+  }
+
+  .history-time {
+    font-size: 0.75rem;
+    color: var(--default-button-color);
+    text-align: center; /* Centered */
+    font-family: monospace;
+    opacity: 0.8;
+    width: 100%;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .history-item {
+      grid-template-columns: 1fr; /* Stack on mobile */
+      gap: 1.5rem;
+    }
+    .history-right {
+      width: 100%;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-image-wrapper {
+      width: 80px;
+      height: 80px;
+    }
+    .history-left {
+      gap: 1rem;
+    }
+    .history-time {
+      text-align: right;
+    }
+  }
+
+  /* Generate Styles */
+  .input-group {
+    margin-bottom: 1.5rem;
+  }
+  .input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--topbar-text-color);
+    font-weight: 500;
+  }
+  textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--control-button-border-color);
+    background: var(--input-bg-color);
+    color: var(--input-color);
+    font-family: inherit;
+    resize: vertical;
+  }
+  .output-box {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  #generated-qr {
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--control-button-border-color);
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 1rem;
+  }
+  .btn.primary {
+    background: var(--topbar-text-color);
+    color: var(--body-bg-color);
+  }
+  .btn.primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  .btn.secondary {
+    background: transparent;
+    border: 1px solid var(--topbar-text-color);
+    color: var(--topbar-text-color);
+  }
+  .btn.secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  .btn.small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container {
+      padding: 1rem;
+    }
+    .header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .nav-back {
+      position: static;
+      align-self: flex-start;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>
